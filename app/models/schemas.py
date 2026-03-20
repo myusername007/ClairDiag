@@ -29,7 +29,17 @@ class Cost(BaseModel):
     savings: int
 
 
+class Comparison(BaseModel):
+    standard_tests: List[str]
+    standard_cost: int
+    optimized_tests: List[str]
+    optimized_cost: int
+    savings: int
+
+
 class AnalyzeResponse(BaseModel):
     diagnoses: List[Diagnosis]
     tests: Tests
     cost: Cost
+    explanation: str
+    comparison: Comparison
