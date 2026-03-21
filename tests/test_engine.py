@@ -3,7 +3,7 @@ from app.logic.engine import analyze
 from app.models.schemas import AnalyzeResponse
 
 
-# ── Базова перевірка структури відповіді ─────────────────────────────
+# ── Структура відповіді ───────────────────────────────────────────────
 
 def test_analyze_returns_correct_structure():
     result = analyze(["температура", "кашель"])
@@ -11,6 +11,8 @@ def test_analyze_returns_correct_structure():
     assert hasattr(result, "diagnoses")
     assert hasattr(result, "tests")
     assert hasattr(result, "cost")
+    assert hasattr(result, "explanation")
+    assert hasattr(result, "comparison")
 
 
 # ── Діагнози ─────────────────────────────────────────────────────────
@@ -79,3 +81,36 @@ def test_cost_is_zero_for_unknown_symptoms():
     result = analyze(["несуществующий симптом"])
     assert result.cost.required == 0
     assert result.cost.optional == 0
+
+
+# ── Explanation ───────────────────────────────────────────────────────
+
+def test_explanation_is_non_empty_string():
+    result = analyze(["температура", "кашель"])
+    assert isinstance(result.explanation, str)
+    assert len(result.explanation) > 0
+
+
+def test_explanation_for_unknown_symptoms_is_fallback():
+    result = analyze(["несуществующий симптом"])
+    assert "врач" in result.explanation.lower() or "не удалось" in result.explanation.lower()
+
+
+# ── Comparison ────────────────────────────────────────────────────────
+
+def test_comparison_standard_cost_gte_optimized():
+    result = analyze(["температура", "кашель"])
+    assert result.comparison.standard_cost >= result.comparison.optimized_cost
+
+
+def test_comparison_savings_correct():
+    result = analyze(["температура", "кашель"])
+    expected = result.comparison.standard_cost - result.comparison.optimized_cost
+    assert result.comparison.savings == expected
+
+
+def test_comparison_optimized_tests_subset_of_standard():
+    result = analyze(["температура", "кашель"])
+    optimized = set(result.comparison.optimized_tests)
+    standard = set(result.comparison.standard_tests)
+    assert optimized.issubset(standard)

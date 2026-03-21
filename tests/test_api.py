@@ -5,26 +5,66 @@ from app.main import app
 client = TestClient(app)
 
 
-# Health / root
+# ── Root / Health ─────────────────────────────────────────────────────
 
 def test_root_returns_200():
     response = client.get("/")
     assert response.status_code == 200
 
 
-# POST /analyze — валідні запити
+def test_health_returns_200():
+    response = client.get("/v1/health")
+    assert response.status_code == 200
+
+
+def test_health_returns_ok_status():
+    response = client.get("/v1/health")
+    assert response.json()["status"] == "ok"
+
+
+# ── GET /v1/demo ──────────────────────────────────────────────────────
+
+def test_demo_returns_200():
+    response = client.get("/v1/demo")
+    assert response.status_code == 200
+
+
+def test_demo_returns_plain_text():
+    response = client.get("/v1/demo")
+    assert "text/plain" in response.headers["content-type"]
+
+
+def test_demo_contains_scenarios():
+    response = client.get("/v1/demo")
+    text = response.text
+    assert "Грипп" in text
+    assert "Аллергия" in text
+    assert "Бронхит" in text
+
+
+def test_demo_contains_key_sections():
+    response = client.get("/v1/demo")
+    text = response.text
+    assert "Рекомендовані аналізи" in text
+    assert "Потенційна економія" in text
+    assert "Стандартний шлях" in text
+
+
+# ── POST /v1/analyze — структура відповіді ───────────────────────────
 
 def test_analyze_returns_200():
     response = client.post("/v1/analyze", json={"symptoms": ["температура", "кашель"]})
     assert response.status_code == 200
 
 
-def test_analyze_response_has_required_fields():
-    response = client.post("/v1/analyze", json={"symptoms": ["температура"]})
+def test_analyze_response_has_all_fields():
+    response = client.post("/v1/analyze", json={"symptoms": ["температура", "кашель"]})
     data = response.json()
     assert "diagnoses" in data
     assert "tests" in data
     assert "cost" in data
+    assert "explanation" in data
+    assert "comparison" in data
 
 
 def test_analyze_tests_has_required_and_optional():
@@ -35,11 +75,29 @@ def test_analyze_tests_has_required_and_optional():
 
 
 def test_analyze_cost_has_all_fields():
-    response = client.post("/v1/analyze", json={"symptoms": ["температура"]})
+    response = client.post("/v1/analyze", json={"symptoms": ["температура", "кашель"]})
     data = response.json()
     assert "required" in data["cost"]
     assert "optional" in data["cost"]
     assert "savings" in data["cost"]
+
+
+def test_analyze_comparison_has_all_fields():
+    response = client.post("/v1/analyze", json={"symptoms": ["температура", "кашель"]})
+    data = response.json()
+    c = data["comparison"]
+    assert "standard_tests" in c
+    assert "standard_cost" in c
+    assert "optimized_tests" in c
+    assert "optimized_cost" in c
+    assert "savings" in c
+
+
+def test_analyze_explanation_is_string():
+    response = client.post("/v1/analyze", json={"symptoms": ["температура", "кашель"]})
+    data = response.json()
+    assert isinstance(data["explanation"], str)
+    assert len(data["explanation"]) > 0
 
 
 def test_analyze_diagnoses_are_list():
@@ -48,13 +106,12 @@ def test_analyze_diagnoses_are_list():
     assert isinstance(data["diagnoses"], list)
 
 
-# POST /analyze — граничні випадки 
+# ── POST /v1/analyze — граничні випадки ──────────────────────────────
 
-def test_analyze_unknown_symptoms_returns_empty():
+def test_analyze_unknown_symptoms_returns_empty_diagnoses():
     response = client.post("/v1/analyze", json={"symptoms": ["невідомий симптом"]})
     assert response.status_code == 200
-    data = response.json()
-    assert data["diagnoses"] == []
+    assert response.json()["diagnoses"] == []
 
 
 def test_analyze_empty_symptoms_returns_200():
@@ -62,7 +119,12 @@ def test_analyze_empty_symptoms_returns_200():
     assert response.status_code == 200
 
 
-# Валідація вхідних даних 
+def test_analyze_empty_symptoms_returns_empty_diagnoses():
+    response = client.post("/v1/analyze", json={"symptoms": []})
+    assert response.json()["diagnoses"] == []
+
+
+# ── Валідація ─────────────────────────────────────────────────────────
 
 def test_analyze_missing_body_returns_422():
     response = client.post("/v1/analyze")
@@ -71,4 +133,9 @@ def test_analyze_missing_body_returns_422():
 
 def test_analyze_wrong_type_returns_422():
     response = client.post("/v1/analyze", json={"symptoms": "температура"})
+    assert response.status_code == 422
+
+
+def test_analyze_invalid_field_returns_422():
+    response = client.post("/v1/analyze", json={"wrong_field": ["температура"]})
     assert response.status_code == 422
