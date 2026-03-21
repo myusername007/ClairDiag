@@ -36,7 +36,11 @@ class Comparison(BaseModel):
     optimized_tests: List[str]
     optimized_cost: int
     savings: int
-    savings_multiplier: str  # например "~4.5x дешевле"
+    savings_multiplier: str  # например "~4.5x moins cher"
+    standard_range: str = ""   # "~250€ – 400€"
+    optimized_range: str = ""  # "~40€ – 100€"
+    savings_range: str = ""    # "~150€ – 300€"
+    cost_note: str = ""        # "Exemple basé sur un cas clinique courant"
 
 
 class AnalyzeResponse(BaseModel):
