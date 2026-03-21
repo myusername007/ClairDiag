@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ClairDiag — Оптимальный план анализов</title>
+  <title>ClairDiag — Plan d'analyses optimisé</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
@@ -436,15 +436,15 @@
 <div class="hero">
   <div class="hero-eyebrow">
     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/></svg>
-    Интеллектуальная диагностика
+    Diagnostic intelligent
   </div>
-  <h1 class="hero-title">Симптомы → <em>оптимальный</em><br>план анализов</h1>
-  <p class="hero-sub">Введите симптомы — система подберёт нужные анализы и покажет, сколько можно сэкономить относительно стандартного назначения</p>
+  <h1 class="hero-title">Symptômes → <em>plan d'analyses</em><br>optimisé</h1>
+  <p class="hero-sub">Sélectionnez un scénario ou saisissez vos symptômes — le système propose les analyses utiles et estime les coûts.</p>
 </div>
 
 <div class="wrap">
   <div class="input-card">
-    <div class="block-label">Готовые сценарии</div>
+    <div class="block-label">Scénarios disponibles</div>
     <div class="sc-grid" id="chips"></div>
     <div class="input-row">
       <div class="input-field-wrap">
@@ -452,12 +452,12 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
         </span>
         <input class="inp" id="inp" type="text"
-          placeholder="температура, кашель, слабость..."
+          placeholder="fièvre, toux, fatigue, douleur thoracique..."
           onkeydown="if(event.key==='Enter') run()"
           autocomplete="off"/>
       </div>
       <button class="go-btn" id="go" onclick="run()">
-        Анализировать
+        Analyser
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
       </button>
     </div>
@@ -469,19 +469,19 @@
 </div>
 
 <footer>
-  Система не является медицинской рекомендацией и не заменяет врача.<br>
-  Стоимость ориентировочная — средние рыночные цены (Франция / ЕС), для демонстрации ценности продукта.
+  Ce système ne remplace pas un médecin. Il ne constitue pas un avis médical professionnel.<br>
+  Les coûts sont estimés sur la base des prix moyens en France (ou UE) et peuvent varier selon les établissements.
 </footer>
 
 <script>
-  /* ── Иконки сценариев ── */
+  /* ── Icônes des scénarios ── */
   const SC_ICONS = {
-    'Простуда':  `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 8v4l2 2"/></svg>`,
-    'Грипп':     `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>`,
-    'Бронхит':   `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v8"/><path d="M5 10c0 6 2 10 7 12 5-2 7-6 7-12"/></svg>`,
-    'Ангина':    `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 13s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>`,
-    'Пневмония': `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v6"/><path d="M4.93 10.93l1.41 1.41"/><path d="M2 18h2"/><path d="M20 18h2"/><path d="M19.07 10.93l-1.41 1.41"/><path d="M22 22H2"/><path d="M12 8a5 5 0 0 0-5 5c0 1.5.5 2.8 1.3 3.8L12 21l3.7-3.2A5 5 0 0 0 17 13a5 5 0 0 0-5-5z"/></svg>`,
-    'Аллергия':  `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>`,
+    'Rhume':      `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 8v4l2 2"/></svg>`,
+    'Grippe':     `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>`,
+    'Bronchite':  `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v8"/><path d="M5 10c0 6 2 10 7 12 5-2 7-6 7-12"/></svg>`,
+    'Angine':     `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 13s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>`,
+    'Pneumonie':  `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v6"/><path d="M4.93 10.93l1.41 1.41"/><path d="M2 18h2"/><path d="M20 18h2"/><path d="M19.07 10.93l-1.41 1.41"/><path d="M22 22H2"/><path d="M12 8a5 5 0 0 0-5 5c0 1.5.5 2.8 1.3 3.8L12 21l3.7-3.2A5 5 0 0 0 17 13a5 5 0 0 0-5-5z"/></svg>`,
+    'Allergie':   `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>`,
   };
 
   /* ── SVG иконки UI ── */
@@ -553,7 +553,7 @@
       }).then(r => r.json());
       render(data, symptoms);
     } catch (_) {
-      document.getElementById('out').innerHTML = `<div class="empty"><div class="empty-icon">${ICO.warn}</div><div class="empty-text">Нет соединения с сервером.</div></div>`;
+      document.getElementById('out').innerHTML = `<div class="empty"><div class="empty-icon">${ICO.warn}</div><div class="empty-text">Connexion au serveur impossible. Veuillez réessayer.</div></div>`;
     } finally {
       btn.disabled = false;
     }
@@ -564,7 +564,7 @@
     const out = document.getElementById('out');
 
     if (!d.diagnoses?.length) {
-      out.innerHTML = `<div class="empty"><div class="empty-icon">${ICO.search}</div><div class="empty-text">По симптомам <strong>${symptoms.join(', ')}</strong> ничего не найдено.<br>Попробуйте добавить больше симптомов.</div></div>`;
+      out.innerHTML = `<div class="empty"><div class="empty-icon">${ICO.search}</div><div class="empty-text">Aucun résultat pour <strong>${symptoms.join(', ')}</strong>.<br>Essayez d'ajouter d'autres symptômes.</div></div>`;
       return;
     }
 
@@ -593,22 +593,22 @@
     const mult = d.comparison.savings_multiplier;
 
     out.innerHTML = `
-      <div class="section-divider">Результат анализа</div>
+      <div class="section-divider">Résultat de l'analyse</div>
 
       <div class="grid-2">
         <div class="card">
-          <div class="card-title">Вероятные диагнозы</div>
+          <div class="card-title">Diagnostics probables</div>
           ${diagHtml}
         </div>
         <div class="card">
-          <div class="card-title">Анализы</div>
+          <div class="card-title">Analyses médicales</div>
           <div class="tests-group">
-            <div class="tests-group-hd req"><span class="tg-dot"></span>Рекомендуем сдать</div>
+            <div class="tests-group-hd req"><span class="tg-dot"></span>Recommandées</div>
             <div class="badges">${reqBadges}</div>
           </div>
           <div style="height:14px"></div>
           <div class="tests-group">
-            <div class="tests-group-hd opt"><span class="tg-dot"></span>Можно пропустить</div>
+            <div class="tests-group-hd opt"><span class="tg-dot"></span>Peuvent être évitées</div>
             <div class="badges">${optBadges}</div>
           </div>
         </div>
@@ -616,29 +616,29 @@
 
       <div class="cost-card">
         <div class="cost-head">
-          <span class="cost-head-title">Сравнение диагностических подходов</span>
+          <span class="cost-head-title">Comparaison des approches diagnostiques</span>
           <span class="cost-head-pill">
             ${ICO.trend}
-            Разница в стоимости
+            Économie estimée
           </span>
         </div>
         <div class="cost-cols">
           <div class="cost-col before">
-            <div class="cost-col-lbl">Стандартный путь</div>
-            <div class="cost-col-sub">как обычно назначают</div>
+            <div class="cost-col-lbl">Parcours standard</div>
+            <div class="cost-col-sub">examens souvent prescrits</div>
             <div class="cost-num"><span class="cost-currency">€</span>${std}</div>
           </div>
           <div class="cost-arrow-col">${ICO.arrow}</div>
           <div class="cost-col after">
-            <div class="cost-col-lbl">Оптимальный путь</div>
-            <div class="cost-col-sub">только нужные анализы</div>
+            <div class="cost-col-lbl">Approche optimisée</div>
+            <div class="cost-col-sub">uniquement les analyses nécessaires</div>
             <div class="cost-num"><span class="cost-currency">€</span>${opt}</div>
           </div>
         </div>
         <div class="cost-savings">
           <div class="cs-left">
             ${ICO.trend}
-            <span class="cs-label">Потенциальная экономия</span>
+            <span class="cs-label">Économie estimée</span>
           </div>
           <div class="cs-right">
             <span class="cs-val">~€${save}</span>
@@ -646,25 +646,25 @@
           </div>
         </div>
         <div class="cost-note">
-          Оценка основана на средних рыночных ценах (Франция / ЕС). Фактическая стоимость может отличаться.
+          Estimation basée sur des prix moyens du marché en France / UE. Les tarifs peuvent varier selon les établissements.
         </div>
       </div>
 
       <div class="expl-card">
         <div class="expl-icon-box">${ICO.info}</div>
         <div class="expl-body">
-          <div class="expl-title">Пояснение</div>
+          <div class="expl-title">Explication</div>
           <div class="expl-text">${d.explanation}</div>
         </div>
       </div>
 
       <div class="value-note">
         ${ICO.check}
-        Система помогает исключить избыточные анализы на раннем этапе диагностики
+        Réduction potentielle des coûts médicaux inutiles dès la première étape du diagnostic
       </div>
 
       <div class="result-hint">
-        Рекомендуемые анализы покрывают базовую проверку в большинстве типичных случаев. При осложнениях список может быть расширен.
+        Les analyses recommandées couvrent le bilan de base dans la plupart des cas courants. En cas de complications, la liste peut être étendue par un médecin.
       </div>
     `;
 

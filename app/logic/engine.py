@@ -1,95 +1,94 @@
 from app.models.schemas import AnalyzeResponse, Comparison, Diagnosis, Tests, Cost
 
-# Зв'язки: симптом → діагнози з вагою
+# Liens : symptôme → diagnostics avec poids
 SYMPTOM_DIAGNOSES: dict[str, dict[str, float]] = {
-    "температура":      {"Грипп": 0.8, "ОРВИ": 0.7, "Бронхит": 0.4, "Пневмония": 0.3, "Ангина": 0.5},
-    "кашель":           {"Бронхит": 0.8, "ОРВИ": 0.6, "Грипп": 0.5, "Пневмония": 0.4, "Аллергия": 0.3},
-    "насморк":          {"ОРВИ": 0.9, "Грипп": 0.6, "Аллергия": 0.5},
-    "головная боль":    {"Грипп": 0.7, "ОРВИ": 0.5, "Гипертония": 0.4},
-    "боль в горле":     {"ОРВИ": 0.8, "Ангина": 0.9, "Грипп": 0.5},
-    "одышка":           {"Пневмония": 0.8, "Бронхит": 0.6, "Астма": 0.7, "Стенокардия": 0.4},
-    "боль в груди":     {"Пневмония": 0.6, "Бронхит": 0.4, "Стенокардия": 0.8},
-    "слабость":         {"Грипп": 0.6, "ОРВИ": 0.5, "Анемия": 0.5, "Ангина": 0.4, "Пневмония": 0.4},
-    "потеря аппетита":  {"Грипп": 0.4, "Гастрит": 0.6, "Анемия": 0.4},
-    "тошнота":          {"Гастрит": 0.8, "Грипп": 0.3},
-    "чихание":          {"Аллергия": 0.8, "ОРВИ": 0.4},
-    "зуд в горле":      {"Аллергия": 0.7},
+    "fièvre":                {"Grippe": 0.8, "Rhinopharyngite": 0.7, "Bronchite": 0.4, "Pneumonie": 0.3, "Angine": 0.5},
+    "toux":                  {"Bronchite": 0.8, "Rhinopharyngite": 0.6, "Grippe": 0.5, "Pneumonie": 0.4, "Allergie": 0.3},
+    "rhinorrhée":            {"Rhinopharyngite": 0.9, "Grippe": 0.6, "Allergie": 0.5},
+    "céphalées":             {"Grippe": 0.7, "Rhinopharyngite": 0.5, "Hypertension": 0.4},
+    "mal de gorge":          {"Rhinopharyngite": 0.8, "Angine": 0.9, "Grippe": 0.5},
+    "essoufflement":         {"Pneumonie": 0.8, "Bronchite": 0.6, "Asthme": 0.7, "Angor": 0.4},
+    "douleur thoracique":    {"Pneumonie": 0.6, "Bronchite": 0.4, "Angor": 0.8},
+    "fatigue":               {"Grippe": 0.6, "Rhinopharyngite": 0.5, "Anémie": 0.5, "Angine": 0.4, "Pneumonie": 0.4},
+    "perte d'appétit":       {"Grippe": 0.4, "Gastrite": 0.6, "Anémie": 0.4},
+    "nausées":               {"Gastrite": 0.8, "Grippe": 0.3},
+    "éternuements":          {"Allergie": 0.8, "Rhinopharyngite": 0.4},
+    "irritation de la gorge":{"Allergie": 0.7},
 }
 
-# Зв'язки: діагноз → аналізи
+# Liens : diagnostic → analyses
 DIAGNOSIS_TESTS: dict[str, dict[str, list[str]]] = {
-    "Грипп":       {"required": ["Общий анализ крови", "CRP"],            "optional": ["ПЦР на грипп"]},
-    "ОРВИ":        {"required": ["Общий анализ крови"],                   "optional": ["Мазок из зева"]},
-    "Бронхит":     {"required": ["Общий анализ крови", "CRP", "Рентген"], "optional": ["КТ грудной клетки"]},
-    "Пневмония":   {"required": ["Общий анализ крови", "CRP", "Рентген"], "optional": ["КТ грудной клетки", "Посев мокроты"]},
-    "Ангина":      {"required": ["Общий анализ крови", "Мазок из зева"],  "optional": ["АСЛ-О"]},
-    "Астма":       {"required": ["Спирометрия", "Общий анализ крови"],    "optional": ["Аллергопробы"]},
-    "Гипертония":  {"required": ["ЭКГ", "Общий анализ крови"],            "optional": ["УЗИ сердца"]},
-    "Гастрит":     {"required": ["Общий анализ крови", "Хелиобактер"],    "optional": ["ФГДС"]},
-    "Анемия":      {"required": ["Общий анализ крови", "Ферритин"],       "optional": ["Витамин B12"]},
-    "Аллергия":    {"required": ["Общий анализ крови", "IgE общий"],      "optional": ["Аллергопробы"]},
-    "Стенокардия": {"required": ["ЭКГ", "Тропонин", "CRP"],               "optional": ["УЗИ сердца", "Холтер"]},
+    "Grippe":          {"required": ["NFS", "CRP"],                              "optional": ["PCR grippe"]},
+    "Rhinopharyngite": {"required": ["NFS"],                                     "optional": ["Prélèvement pharyngé"]},
+    "Bronchite":       {"required": ["NFS", "CRP", "Radiographie pulmonaire"],   "optional": ["Scanner thoracique"]},
+    "Pneumonie":       {"required": ["NFS", "CRP", "Radiographie pulmonaire"],   "optional": ["Scanner thoracique", "Culture des expectorations"]},
+    "Angine":          {"required": ["NFS", "Prélèvement pharyngé"],             "optional": ["ASLO"]},
+    "Asthme":          {"required": ["Spirométrie", "NFS"],                      "optional": ["Tests allergologiques"]},
+    "Hypertension":    {"required": ["ECG", "NFS"],                              "optional": ["Échocardiographie"]},
+    "Gastrite":        {"required": ["NFS", "Test Helicobacter pylori"],         "optional": ["Fibroscopie gastrique"]},
+    "Anémie":          {"required": ["NFS", "Ferritine"],                        "optional": ["Vitamine B12"]},
+    "Allergie":        {"required": ["NFS", "IgE totales"],                      "optional": ["Tests allergologiques"]},
+    "Angor":           {"required": ["ECG", "Troponine", "CRP"],                 "optional": ["Échocardiographie", "Holter ECG"]},
 }
 
-# Референсні ціни (€, середній ринок Франція / ЄС, для демо)
+# Prix de référence (€, marché moyen France / UE — à titre indicatif)
 TEST_COSTS: dict[str, int] = {
-    "Общий анализ крови": 20,
-    "CRP":                15,
-    "ПЦР на грипп":       40,
-    "Мазок из зева":      25,
-    "Рентген":            80,
-    "КТ грудной клетки":  200,
-    "Посев мокроты":      45,
-    "АСЛ-О":              20,
-    "Спирометрия":        60,
-    "Аллергопробы":       90,
-    "ЭКГ":                40,
-    "УЗИ сердца":         85,
-    "Хелиобактер":        35,
-    "ФГДС":               120,
-    "Ферритин":           25,
-    "Витамин B12":        25,
-    "IgE общий":          35,
-    "Тропонин":           25,
-    "Холтер":             80,
+    "NFS":                         20,
+    "CRP":                         15,
+    "PCR grippe":                  40,
+    "Prélèvement pharyngé":        25,
+    "Radiographie pulmonaire":     80,
+    "Scanner thoracique":         200,
+    "Culture des expectorations":  45,
+    "ASLO":                        20,
+    "Spirométrie":                 60,
+    "Tests allergologiques":       90,
+    "ECG":                         40,
+    "Échocardiographie":           85,
+    "Test Helicobacter pylori":    35,
+    "Fibroscopie gastrique":      120,
+    "Ferritine":                   25,
+    "Vitamine B12":                25,
+    "IgE totales":                 35,
+    "Troponine":                   25,
+    "Holter ECG":                  80,
 }
 
-# Объяснение зачем нужен каждый анализ
+# Explication de chaque analyse (langue simple)
 TEST_EXPLANATIONS: dict[str, str] = {
-    "Общий анализ крови": "показывает воспаление и общее состояние иммунитета",
-    "CRP":                "маркер острого воспаления — помогает оценить тяжесть инфекции",
-    "ПЦР на грипп":       "точно подтверждает или исключает вирус гриппа",
-    "Мазок из зева":      "выявляет бактериальную инфекцию горла",
-    "Рентген":            "показывает состояние лёгких и бронхов",
-    "КТ грудной клетки":  "детальный снимок лёгких при подозрении на осложнения",
-    "Посев мокроты":      "определяет возбудителя и чувствительность к антибиотикам",
-    "АСЛ-О":              "выявляет перенесённую стрептококковую инфекцию",
-    "Спирометрия":        "оценивает функцию дыхания при подозрении на астму",
-    "Аллергопробы":       "определяет конкретные аллергены",
-    "ЭКГ":                "оценивает работу сердца",
-    "УЗИ сердца":         "детальная картина состояния сердечной мышцы",
-    "Хелиобактер":        "выявляет бактерию — основную причину гастрита",
-    "ФГДС":               "визуальный осмотр слизистой желудка",
-    "Ферритин":           "показывает запасы железа в организме",
-    "Витамин B12":        "проверяет уровень витамина, дефицит которого вызывает анемию",
-    "IgE общий":          "показывает общий уровень аллергических антител",
-    "Тропонин":           "маркер повреждения сердечной мышцы",
-    "Холтер":             "суточный мониторинг сердца",
+    "NFS":                         "évalue l'inflammation et l'état général du système immunitaire",
+    "CRP":                         "marqueur d'inflammation aiguë — mesure la sévérité de l'infection",
+    "PCR grippe":                  "confirme ou exclut précisément le virus de la grippe",
+    "Prélèvement pharyngé":        "identifie une infection bactérienne de la gorge",
+    "Radiographie pulmonaire":     "visualise l'état des poumons et des bronches",
+    "Scanner thoracique":          "imagerie détaillée des poumons en cas de complications suspectées",
+    "Culture des expectorations":  "identifie l'agent pathogène et sa sensibilité aux antibiotiques",
+    "ASLO":                        "détecte une infection streptococcique récente",
+    "Spirométrie":                 "évalue la fonction respiratoire en cas d'asthme suspecté",
+    "Tests allergologiques":       "identifie les allergènes responsables",
+    "ECG":                         "évalue le fonctionnement du cœur",
+    "Échocardiographie":           "imagerie détaillée du muscle cardiaque",
+    "Test Helicobacter pylori":    "détecte la bactérie principale responsable de la gastrite",
+    "Fibroscopie gastrique":       "examen visuel de la muqueuse gastrique",
+    "Ferritine":                   "mesure les réserves en fer de l'organisme",
+    "Vitamine B12":                "contrôle le taux de vitamine B12, dont le déficit cause une anémie",
+    "IgE totales":                 "mesure le niveau global d'anticorps allergiques",
+    "Troponine":                   "marqueur de lésion du muscle cardiaque",
+    "Holter ECG":                  "monitoring cardiaque sur 24 heures",
 }
 
-# Готові сценарії для демо
+# Scénarios prêts pour la démo
 DEMO_SCENARIOS: dict[str, list[str]] = {
-    "Простуда":  ["насморк", "боль в горле", "слабость"],
-    "Грипп":     ["температура", "кашель", "головная боль", "слабость"],
-    "Бронхит":   ["кашель", "одышка", "боль в груди"],
-    "Ангина":    ["боль в горле", "температура", "слабость"],
-    "Пневмония": ["температура", "кашель", "одышка", "боль в груди"],
-    "Аллергия":  ["насморк", "чихание", "зуд в горле"],
+    "Rhume":      ["rhinorrhée", "mal de gorge", "fatigue"],
+    "Grippe":     ["fièvre", "toux", "céphalées", "fatigue"],
+    "Bronchite":  ["toux", "essoufflement", "douleur thoracique"],
+    "Angine":     ["mal de gorge", "fièvre", "fatigue"],
+    "Pneumonie":  ["fièvre", "toux", "essoufflement", "douleur thoracique"],
+    "Allergie":   ["rhinorrhée", "éternuements", "irritation de la gorge"],
 }
 
-# ── Слой 1: специфичность симптомов ────────────────────────────────────────
-# Симптом, указывающий на меньше диагнозов, несёт больше информации.
-# Шкала: n=1 → ×1.40 | n=2 → ×1.30 | n=3 → ×1.20 | n=4 → ×1.10 | n=5 → ×1.00
+# ── Couche 1 : spécificité des symptômes ────────────────────────────────────
+# Un symptôme pointant vers moins de diagnostics porte plus d'information.
 _MAX_DIAG_COUNT = max(len(w) for w in SYMPTOM_DIAGNOSES.values())
 
 
@@ -97,73 +96,86 @@ def _specificity(n: int) -> float:
     return 1.0 + 0.5 * max(0.0, 1.0 - n / _MAX_DIAG_COUNT)
 
 
-# Pre-compute max possible score per diagnosis (с учётом специфичности)
+# Score maximal possible par diagnostic (avec facteur de spécificité)
 DIAGNOSIS_MAX_SCORES: dict[str, float] = {}
 for _sym, _weights in SYMPTOM_DIAGNOSES.items():
     _f = _specificity(len(_weights))
     for _diag, _w in _weights.items():
         DIAGNOSIS_MAX_SCORES[_diag] = DIAGNOSIS_MAX_SCORES.get(_diag, 0) + _w * _f
 
-# Минимальный знаменатель — защита от завышенных % у диагнозов с малой базой
+# Dénominateur minimum — évite les probabilités gonflées pour les diagnostics peu documentés
 _MIN_DENOM = 2.0
 
-# Порог включения диагноза в ответ
+# Seuil d'inclusion d'un diagnostic dans la réponse
 PROBABILITY_THRESHOLD = 0.15
 
 
-# ── Слой 2: бонусы комбинаций ───────────────────────────────────────────────
-# Определённые сочетания симптомов диагностически сильнее их суммы.
-# Бонус применяется только если диагноз уже обнаружен по базовым весам.
+# ── Couche 2 : bonus de combinaisons ────────────────────────────────────────
+# Certaines combinaisons de symptômes sont plus diagnostiques que leur somme.
+# Le bonus s'applique uniquement si le diagnostic est déjà détecté.
 COMBO_BONUSES: list[tuple[frozenset[str], dict[str, float]]] = [
-    (frozenset({"температура", "кашель", "одышка"}),           {"Пневмония": 0.25}),
-    (frozenset({"кашель", "одышка"}),                          {"Бронхит": 0.15, "Астма": 0.15}),
-    (frozenset({"насморк", "чихание", "зуд в горле"}),         {"Аллергия": 0.35}),
-    (frozenset({"боль в горле", "температура"}),               {"Ангина": 0.20}),
-    (frozenset({"боль в груди", "одышка"}),                    {"Стенокардия": 0.25, "Пневмония": 0.15}),
-    (frozenset({"температура", "головная боль", "слабость"}),  {"Грипп": 0.20}),
-    (frozenset({"тошнота", "потеря аппетита"}),                {"Гастрит": 0.20}),
-    (frozenset({"слабость", "потеря аппетита"}),               {"Анемия": 0.15}),
+    (frozenset({"fièvre", "toux", "essoufflement"}),            {"Pneumonie": 0.25}),
+    (frozenset({"toux", "essoufflement"}),                      {"Bronchite": 0.15, "Asthme": 0.15}),
+    (frozenset({"rhinorrhée", "éternuements", "irritation de la gorge"}), {"Allergie": 0.35}),
+    (frozenset({"mal de gorge", "fièvre"}),                     {"Angine": 0.20}),
+    (frozenset({"douleur thoracique", "essoufflement"}),        {"Angor": 0.25, "Pneumonie": 0.15}),
+    (frozenset({"fièvre", "céphalées", "fatigue"}),             {"Grippe": 0.20}),
+    (frozenset({"nausées", "perte d'appétit"}),                 {"Gastrite": 0.20}),
+    (frozenset({"fatigue", "perte d'appétit"}),                 {"Anémie": 0.15}),
 ]
 
 
-# ── Слой 3: исключающие признаки ────────────────────────────────────────────
-# Некоторые симптомы снижают вероятность несовместимых диагнозов.
+# ── Couche 3 : symptômes d'exclusion ────────────────────────────────────────
+# Certains symptômes réduisent la probabilité de diagnostics incompatibles.
 SYMPTOM_EXCLUSIONS: dict[str, dict[str, float]] = {
-    "чихание":      {"Пневмония": 0.15, "Бронхит": 0.10, "Стенокардия": 0.20},
-    "зуд в горле":  {"Грипп": 0.15, "Бронхит": 0.15, "Пневмония": 0.20},
-    "тошнота":      {"Астма": 0.15, "Аллергия": 0.10},
-    "насморк":      {"Стенокардия": 0.20, "Гастрит": 0.15},
-    "боль в груди": {"Гастрит": 0.15, "Аллергия": 0.15},
+    "éternuements":          {"Pneumonie": 0.15, "Bronchite": 0.10, "Angor": 0.20},
+    "irritation de la gorge":{"Grippe": 0.15, "Bronchite": 0.15, "Pneumonie": 0.20},
+    "nausées":               {"Asthme": 0.15, "Allergie": 0.10},
+    "rhinorrhée":            {"Angor": 0.20, "Gastrite": 0.15},
+    "douleur thoracique":    {"Gastrite": 0.15, "Allergie": 0.15},
+}
+
+# Article grammatical par diagnostic (pour les phrases en français)
+_DIAG_ARTICLE: dict[str, str] = {
+    "Grippe": "une", "Rhinopharyngite": "une", "Bronchite": "une",
+    "Pneumonie": "une", "Angine": "une", "Asthme": "un",
+    "Hypertension": "une", "Gastrite": "une", "Anémie": "une",
+    "Allergie": "une", "Angor": "un",
 }
 
 
-# ── Explanation ─────────────────────────────────────────────────────────────
+# ── Explication ──────────────────────────────────────────────────────────────
 def _build_explanation(symptoms: list[str], diagnoses: list[Diagnosis], required_tests: list[str]) -> str:
     if not diagnoses:
-        return "Недостаточно симптомов для определения диагноза. Попробуйте добавить больше или обратитесь к врачу."
+        return "Les symptômes fournis ne permettent pas d'établir un diagnostic. Veuillez consulter un médecin."
 
     top = diagnoses[0]
     pct = int(top.probability * 100)
+    art = _DIAG_ARTICLE.get(top.name, "une")
 
     if pct >= 65:
-        start = f"Скорее всего это {top.name}."
+        start = f"Les symptômes correspondent le plus probablement à {art} {top.name}."
     elif pct >= 40:
-        start = f"Вероятнее всего — {top.name}."
+        start = f"Le diagnostic le plus probable est {art} {top.name}."
     else:
-        start = f"Возможно, это {top.name}, но симптомов пока недостаточно."
+        start = f"{art.capitalize()} {top.name} est possible, mais les symptômes restent insuffisants pour confirmer."
 
-    alt = f" Также нельзя исключить {diagnoses[1].name}." if len(diagnoses) > 1 else ""
+    if len(diagnoses) > 1:
+        art2 = _DIAG_ARTICLE.get(diagnoses[1].name, "une")
+        alt = f" {art2.capitalize()} {diagnoses[1].name} ne peut pas être totalement exclue."
+    else:
+        alt = ""
 
     first_two = [t for t in required_tests[:2] if t in TEST_EXPLANATIONS]
     tests_hint = ""
     if first_two:
-        joined = " и ".join(f"{t} — {TEST_EXPLANATIONS[t]}" for t in first_two)
-        tests_hint = f" Для первичной проверки достаточно: {joined}."
+        joined = " et ".join(f"{t} ({TEST_EXPLANATIONS[t]})" for t in first_two)
+        tests_hint = f" Pour une première évaluation, les analyses suivantes sont suffisantes : {joined}."
 
     return start + alt + tests_hint
 
 
-# ── Основная функция ─────────────────────────────────────────────────────────
+# ── Fonction principale ──────────────────────────────────────────────────────
 def analyze(symptoms: list[str]) -> AnalyzeResponse:
     symptom_set = {s.lower().strip() for s in symptoms}
 
@@ -173,7 +185,7 @@ def analyze(symptoms: list[str]) -> AnalyzeResponse:
         savings=0, savings_multiplier="—",
     )
 
-    # Слой 1 — базовый скор с учётом специфичности симптома
+    # Couche 1 — score de base avec facteur de spécificité
     raw: dict[str, float] = {}
     for sym in symptom_set:
         weights = SYMPTOM_DIAGNOSES.get(sym, {})
@@ -186,34 +198,34 @@ def analyze(symptoms: list[str]) -> AnalyzeResponse:
             diagnoses=[],
             tests=Tests(required=[], optional=[]),
             cost=Cost(required=0, optional=0, savings=0),
-            explanation="По указанным симптомам диагноз определить не удалось. Обратитесь к врачу.",
+            explanation="Les symptômes indiqués ne permettent pas d'identifier un diagnostic. Veuillez consulter un médecin.",
             comparison=empty_comparison,
         )
 
-    # Нормализация: какую долю максимально возможных улик мы собрали?
+    # Normalisation : quelle fraction des indices possibles avons-nous recueillis ?
     probs: dict[str, float] = {
         name: min(score / max(DIAGNOSIS_MAX_SCORES[name], _MIN_DENOM), 1.0)
         for name, score in raw.items()
     }
 
-    # Слой 2 — бонусы комбинаций (только усиливают уже найденные диагнозы)
+    # Couche 2 — bonus de combinaisons (renforce uniquement les diagnostics déjà détectés)
     for combo, bonuses in COMBO_BONUSES:
         if combo.issubset(symptom_set):
             for diag, bonus in bonuses.items():
                 if diag in probs:
                     probs[diag] = min(1.0, probs[diag] + bonus)
 
-    # Слой 3 — штрафы за несовместимые симптомы
+    # Couche 3 — pénalités pour symptômes incompatibles
     for sym in symptom_set:
         for diag, penalty in SYMPTOM_EXCLUSIONS.get(sym, {}).items():
             if diag in probs:
                 probs[diag] = max(0.0, probs[diag] - penalty)
 
-    # Финальный кап: вероятность не превышает 75% — честнее для demo
+    # Plafond final : probabilité ≤ 75 % — plus honnête pour une démo
     _MAX_PROB = 0.75
     probs = {name: min(prob, _MAX_PROB) for name, prob in probs.items()}
 
-    # Фильтрация, сортировка, топ-3
+    # Filtrage, tri, top 3
     diagnoses = sorted(
         [
             Diagnosis(name=name, probability=round(prob, 2))
@@ -224,9 +236,9 @@ def analyze(symptoms: list[str]) -> AnalyzeResponse:
         reverse=True,
     )[:3]
 
-    # Сбор анализов по топ-3 диагнозам
-    # Базовый набор первичной проверки — всегда в required (если присутствует)
-    BASE_REQUIRED = {"Общий анализ крови", "CRP"}
+    # Collecte des analyses pour les 3 premiers diagnostics
+    # Bilan de base (toujours en recommandé si présent)
+    BASE_REQUIRED = {"NFS", "CRP"}
 
     all_tests: set[str] = set()
     for diag in diagnoses:
@@ -234,8 +246,8 @@ def analyze(symptoms: list[str]) -> AnalyzeResponse:
         all_tests.update(tests.get("required", []))
         all_tests.update(tests.get("optional", []))
 
-    # required = только базовые анализы из тех, что вообще показаны
-    # optional = всё остальное
+    # recommandées = uniquement le bilan de base parmi les analyses indiquées
+    # optionnelles = tout le reste
     required_set = all_tests & BASE_REQUIRED
     optional_set = all_tests - BASE_REQUIRED
 
@@ -258,7 +270,7 @@ def analyze(symptoms: list[str]) -> AnalyzeResponse:
             optimized_cost=optimized_cost,
             savings=standard_cost - optimized_cost,
             savings_multiplier=(
-                f"~{round(standard_cost / optimized_cost, 1)}x дешевле"
+                f"~{round(standard_cost / optimized_cost, 1)}x moins cher"
                 if optimized_cost > 0 else "—"
             ),
         ),
