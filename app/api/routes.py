@@ -8,27 +8,47 @@ router = APIRouter()
 logger = logging.getLogger("clairdiag")
 
 
-@router.get("/health", summary="Health check")
+@router.get("/health", summary="Проверка работоспособности")
 def health():
     return {"status": "ok"}
 
 
-@router.post("/analyze", response_model=AnalyzeResponse, summary="Analyze symptoms")
+@router.post("/analyze", response_model=AnalyzeResponse, summary="Анализ симптомов")
 def analyze_symptoms(request: AnalyzeRequest) -> AnalyzeResponse:
+    """
+    Принимает список симптомов, возвращает:
+    - вероятные диагнозы
+    - необходимые и опциональные анализы
+    - стоимость и потенциальную экономию
+    - объяснение для человека
+    - сравнение стандартного и оптимизированного пути
+    """
     symptoms = [s.strip() for s in request.symptoms if s.strip()]
-    logger.info(f"Analyze request: {symptoms}")
+    logger.info(f"Запрос на анализ: {symptoms}")
     try:
         result = analyze(symptoms)
-        logger.info(f"Result: {len(result.diagnoses)} diagnoses found")
+        logger.info(f"Результат: найдено {len(result.diagnoses)} диагнозов")
         return result
     except Exception as e:
-        logger.error(f"Analyze error: {e}")
-        raise HTTPException(status_code=500, detail="Internal error during analysis")
+        logger.error(f"Ошибка анализа: {e}")
+        raise HTTPException(status_code=500, detail="Внутренняя ошибка при анализе")
 
 
-@router.get("/demo", response_class=PlainTextResponse, summary="Live demo — open in browser")
+@router.get("/scenarios", summary="Список готовых сценариев для демо")
+def get_scenarios() -> dict:
+    """Возвращает готовые сценарии. Можно использовать как вход для POST /v1/analyze."""
+    return {
+        "scenarios": [
+            {"name": name, "symptoms": symptoms}
+            for name, symptoms in DEMO_SCENARIOS.items()
+        ]
+    }
+
+
+@router.get("/demo", response_class=PlainTextResponse, summary="Демо")
 def demo() -> str:
-    lines = ["=" * 50, "  ClairDiag — Demo", "=" * 50, ""]
+    """Готовые сценарии для демонстрации. Открыть в браузере — результат виден сразу."""
+    lines = ["=" * 50, "  ClairDiag — Демо", "=" * 50, ""]
 
     for scenario_name, symptoms in DEMO_SCENARIOS.items():
         result = analyze(symptoms)
@@ -41,30 +61,28 @@ def demo() -> str:
         savings_x = round(std / opt, 1) if opt > 0 else 0
 
         lines += [
-            f"📋 Сценарій: {scenario_name}",
-            f"   Симптоми: {', '.join(symptoms)}",
+            f"📋 Сценарий: {scenario_name}",
+            f"   Симптомы: {', '.join(symptoms)}",
             "",
         ]
 
         if top:
-            lines += [
-                f"   Найімовірніший діагноз:  {top.name} ({int(top.probability * 100)}%)",
-            ]
+            lines.append(f"   Наиболее вероятный диагноз:  {top.name} ({int(top.probability * 100)}%)")
             if others:
-                lines.append(f"   Також розглядаємо:       {', '.join(others)}")
+                lines.append(f"   Также рассматриваем:         {', '.join(others)}")
 
         lines += [
             "",
-            f"   ✅ Рекомендовані аналізи:  {', '.join(result.tests.required)}",
+            f"   ✅ Рекомендуемые анализы:     {', '.join(result.tests.required)}",
         ]
         if result.tests.optional:
-            lines.append(f"   ⏭  Можна пропустити:       {', '.join(result.tests.optional)}")
+            lines.append(f"   ⏭  Можно пропустить:          {', '.join(result.tests.optional)}")
 
         lines += [
             "",
-            f"   💰 Стандартний шлях:       ~{std} грн",
-            f"   💡 Рекомендований:         ~{opt} грн",
-            f"   📉 Потенційна економія:    ~{savings_x}x дешевше",
+            f"   💰 Стандартный путь:          ~{std} грн",
+            f"   💡 Рекомендованный:           ~{opt} грн",
+            f"   📉 Потенциальная экономия:    ~{savings_x}x дешевле",
             "",
             f"   💬 {result.explanation}",
             "",
@@ -72,5 +90,5 @@ def demo() -> str:
             "",
         ]
 
-    lines.append("Для власного запиту: POST /v1/analyze")
+    lines.append("Для собственного запроса: POST /v1/analyze")
     return "\n".join(lines)
