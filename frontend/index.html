@@ -98,6 +98,12 @@
       font-size: .96rem; color: #94a3b8; line-height: 1.75;
       max-width: 420px; margin: 0 auto;
     }
+    .hero-tag {
+      margin-top: 16px;
+      font-size: .75rem; font-weight: 600; letter-spacing: .5px;
+      color: rgba(147,197,253,.6);
+      text-transform: uppercase;
+    }
 
     /* ── Layout ──────────────────────────────────────── */
     .wrap { max-width: 780px; margin: 0 auto; padding: 0 20px 80px; }
@@ -149,14 +155,16 @@
     .inp:focus { border-color: var(--blue); background: white; box-shadow: 0 0 0 4px rgba(37,99,235,.08); }
     .inp::placeholder { color: #cbd5e1; }
     .go-btn {
-      height: 48px; padding: 0 26px;
+      height: 52px; padding: 0 30px;
       background: var(--blue); color: white;
-      font-family: inherit; font-size: .9rem; font-weight: 700;
+      font-family: inherit; font-size: .95rem; font-weight: 800;
       border: none; border-radius: 12px; cursor: pointer;
       white-space: nowrap; transition: all .15s;
       display: flex; align-items: center; gap: 8px;
+      box-shadow: 0 2px 8px rgba(37,99,235,.25);
+      letter-spacing: .01em;
     }
-    .go-btn:hover { background: var(--blue-h); transform: translateY(-1px); box-shadow: 0 6px 16px rgba(37,99,235,.35); }
+    .go-btn:hover { background: var(--blue-h); transform: translateY(-1px); box-shadow: 0 8px 20px rgba(37,99,235,.4); }
     .go-btn:active { transform: none; box-shadow: none; }
     .go-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
 
@@ -319,6 +327,21 @@
       text-align: center; padding: 10px 16px;
     }
 
+    /* ── Trust row ───────────────────────────────────── */
+    .trust-row {
+      display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px;
+    }
+    .trust-item {
+      display: flex; align-items: center; gap: 7px;
+      font-size: .78rem; color: var(--muted);
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 99px; padding: 6px 14px;
+      flex: 1; min-width: 200px;
+    }
+    .trust-item svg { flex-shrink: 0; color: var(--green); }
+    .trust-item.trust-accent { color: var(--amber); border-color: var(--amber-light); background: var(--amber-pale); }
+    .trust-item.trust-accent svg { color: var(--amber); }
+
     /* ── Skeleton ────────────────────────────────────── */
     .sk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
     .sk-card {
@@ -440,6 +463,7 @@
   </div>
   <h1 class="hero-title">Symptômes → <em>plan d'analyses</em><br>optimisé</h1>
   <p class="hero-sub">Sélectionnez un scénario ou saisissez vos symptômes — le système propose les analyses utiles et estime les coûts.</p>
+  <p class="hero-tag">Optimisation du parcours diagnostique dès la première étape</p>
 </div>
 
 <div class="wrap">
@@ -665,6 +689,17 @@
 
       <div class="result-hint">
         Les analyses recommandées couvrent le bilan de base dans la plupart des cas courants. En cas de complications, la liste peut être étendue par un médecin.
+      </div>
+
+      <div class="trust-row">
+        <div class="trust-item">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Approche indicative basée sur des scénarios standards
+        </div>
+        <div class="trust-item trust-accent">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
+          Jusqu'à 3–4x moins de coûts inutiles
+        </div>
       </div>
     `;
 
