@@ -77,6 +77,39 @@ TEST_EXPLANATIONS: dict[str, str] = {
     "Holter ECG":                  "monitoring cardiaque sur 24 heures",
 }
 
+
+
+# ── Facteur de variabilité des prix (min/max réaliste) ──────────────────────
+# Chaque analyse a une fourchette basée sur les tarifs publics/privés en France
+TEST_COSTS_MIN: dict[str, int] = {
+    "NFS": 35, "CRP": 50, "PCR grippe": 55, "Prélèvement pharyngé": 35,
+    "Radiographie pulmonaire": 70, "Scanner thoracique": 150,
+    "Culture des expectorations": 45, "ASLO": 28, "Spirométrie": 60,
+    "Tests allergologiques": 90, "ECG": 45, "Échocardiographie": 110,
+    "Test Helicobacter pylori": 40, "Fibroscopie gastrique": 180,
+    "Ferritine": 32, "Vitamine B12": 32, "IgE totales": 45,
+    "Troponine": 35, "Holter ECG": 90,
+}
+TEST_COSTS_MAX: dict[str, int] = {
+    "NFS": 65, "CRP": 85, "PCR grippe": 80, "Prélèvement pharyngé": 60,
+    "Radiographie pulmonaire": 120, "Scanner thoracique": 220,
+    "Culture des expectorations": 70, "ASLO": 50, "Spirométrie": 100,
+    "Tests allergologiques": 140, "ECG": 80, "Échocardiographie": 160,
+    "Test Helicobacter pylori": 65, "Fibroscopie gastrique": 270,
+    "Ferritine": 55, "Vitamine B12": 55, "IgE totales": 70,
+    "Troponine": 60, "Holter ECG": 135,
+}
+
+
+def _cost_range(tests: set[str], costs_min: dict, costs_max: dict) -> tuple[int, int]:
+    lo = sum(costs_min.get(t, TEST_COSTS.get(t, 0)) for t in tests)
+    hi = sum(costs_max.get(t, TEST_COSTS.get(t, 0)) for t in tests)
+    return lo, hi
+
+
+def _fmt_range(lo: int, hi: int) -> str:
+    return f"~{lo}€ – {hi}€"
+
 # Scénarios prêts pour la démo
 DEMO_SCENARIOS: dict[str, list[str]] = {
     "Rhume":      ["rhinorrhée", "mal de gorge", "fatigue"],
@@ -297,6 +330,13 @@ def analyze(symptoms: list[str]) -> AnalyzeResponse:
                 f"~{round(standard_cost / optimized_cost, 1)}x moins cher"
                 if optimized_cost > 0 else "—"
             ),
+            standard_range=_fmt_range(*_cost_range(standard_set, TEST_COSTS_MIN, TEST_COSTS_MAX)),
+            optimized_range=_fmt_range(*_cost_range(required_set, TEST_COSTS_MIN, TEST_COSTS_MAX)),
+            savings_range=_fmt_range(
+                *(_cost_range(standard_set, TEST_COSTS_MIN, TEST_COSTS_MAX)[0] - _cost_range(required_set, TEST_COSTS_MIN, TEST_COSTS_MAX)[1],
+                  _cost_range(standard_set, TEST_COSTS_MIN, TEST_COSTS_MAX)[1] - _cost_range(required_set, TEST_COSTS_MIN, TEST_COSTS_MAX)[0])
+            ) if required_set else "—",
+            cost_note="Exemple basé sur un cas clinique courant — prix indicatifs (marché France / UE)",
         ),
         confidence_level=_confidence_level(diagnoses, len(symptom_set)),
     )
