@@ -647,6 +647,10 @@
     const opt  = d.comparison.optimized_cost;
     const save = d.comparison.savings;
     const mult = d.comparison.savings_multiplier;
+    const std_range  = d.comparison.standard_range  || `~€${std}`;
+    const opt_range  = d.comparison.optimized_range || `~€${opt}`;
+    const save_range = d.comparison.savings_range   || `~€${save}`;
+    const cost_note  = d.comparison.cost_note || "Estimation basée sur des prix moyens du marché en France / UE.";
 
     out.innerHTML = `
       <div class="section-divider">Résultat de l'analyse</div>
@@ -692,13 +696,13 @@
           <div class="cost-col before">
             <div class="cost-col-lbl">Parcours standard</div>
             <div class="cost-col-sub">examens souvent prescrits</div>
-            <div class="cost-num"><span class="cost-currency">€</span>${std}</div>
+            <div class="cost-num" style="font-size:1.9rem;letter-spacing:-1px;">${std_range}</div>
           </div>
           <div class="cost-arrow-col">${ICO.arrow}</div>
           <div class="cost-col after">
             <div class="cost-col-lbl">Approche optimisée</div>
             <div class="cost-col-sub">uniquement les analyses nécessaires</div>
-            <div class="cost-num"><span class="cost-currency">€</span>${opt}</div>
+            <div class="cost-num" style="font-size:1.9rem;letter-spacing:-1px;">${opt_range}</div>
           </div>
         </div>
         <div class="cost-savings">
@@ -707,7 +711,7 @@
             <span class="cs-label">Économie estimée</span>
           </div>
           <div class="cs-right">
-            <span class="cs-val">~€${save}</span>
+            <span class="cs-val">${save_range}</span>
             <span class="cs-mult">${mult}</span>
           </div>
         </div>
