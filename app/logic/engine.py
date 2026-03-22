@@ -436,4 +436,6 @@ def analyze(symptoms: list[str]) -> AnalyzeResponse:
         urgency_level=_urgency_level(diagnoses),
         test_explanations={t: TEST_EXPLANATIONS[t] for t in required_list if t in TEST_EXPLANATIONS},
         test_probabilities=test_probabilities,
+        test_costs={t: TEST_COSTS[t] for t in standard_set if t in TEST_COSTS},
+        consultation_cost=CONSULTATION_COST,
     )
