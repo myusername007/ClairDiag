@@ -85,10 +85,15 @@ def test_optional_tests_not_in_required():
     assert overlap == set()
 
 
-def test_required_tests_are_base_set():
+def test_required_tests_come_from_diagnosis_tests():
+    """required = analyses essentielles selon DIAGNOSIS_TESTS pour les diagnostics détectés"""
+    from app.logic.engine import DIAGNOSIS_TESTS
     result = analyze(["fièvre", "toux"])
+    all_required_possible: set = set()
+    for diag in result.diagnoses:
+        all_required_possible.update(DIAGNOSIS_TESTS.get(diag.name, {}).get("required", []))
     for t in result.tests.required:
-        assert t in {"NFS", "CRP"}
+        assert t in all_required_possible
 
 
 # ── Coûts ─────────────────────────────────────────────────────────────────
@@ -98,9 +103,12 @@ def test_required_cost_greater_than_zero():
     assert result.cost.required > 0
 
 
-def test_savings_equals_optional_cost():
+def test_savings_positive_when_optional_tests_exist():
+    """savings = standard_cost - optimized_cost (weighted optional prescriptions)"""
     result = analyze(["fièvre", "toux"])
-    assert result.cost.savings == result.cost.optional
+    if result.tests.optional:
+        assert result.cost.savings > 0
+    assert result.comparison.savings == result.comparison.standard_cost - result.comparison.optimized_cost
 
 
 def test_cost_is_zero_for_unknown_symptoms():
@@ -143,10 +151,12 @@ def test_comparison_optimized_tests_subset_of_standard():
     assert optimized.issubset(standard)
 
 
-def test_comparison_has_ranges():
+def test_comparison_has_exact_costs():
+    """Exact costs per scenario (no abstract ranges)"""
     result = analyze(["fièvre", "toux"])
-    assert "€" in result.comparison.standard_range
-    assert "€" in result.comparison.optimized_range
+    assert result.comparison.standard_cost > 0
+    assert result.comparison.optimized_cost > 0
+    assert result.comparison.standard_cost >= result.comparison.optimized_cost
 
 
 # ── Confiance & Urgence ───────────────────────────────────────────────────

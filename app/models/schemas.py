@@ -42,9 +42,6 @@ class Comparison(BaseModel):
     optimized_cost: int
     savings: int
     savings_multiplier: str
-    standard_range: str = ""
-    optimized_range: str = ""
-    savings_range: str = ""
     cost_note: str = ""
 
 
@@ -56,3 +53,5 @@ class AnalyzeResponse(BaseModel):
     comparison: Comparison
     confidence_level: str = "modéré"
     urgency_level: str = "faible"
+    test_explanations: dict = {}
+    test_probabilities: dict = {}

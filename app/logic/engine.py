@@ -31,27 +31,30 @@ DIAGNOSIS_TESTS: dict[str, dict[str, list[str]]] = {
     "Angor":           {"required": ["ECG", "Troponine", "CRP"],                 "optional": ["Échocardiographie", "Holter ECG"]},
 }
 
-# Prix de référence (€, marché moyen France / UE — à titre indicatif)
+# Tarif consultation médecin généraliste (Assurance Maladie)
+CONSULTATION_COST: int = 30
+
+# Prix de référence — tarifs orientatifs France (secteur 1 / Assurance Maladie)
 TEST_COSTS: dict[str, int] = {
-    "NFS":                         45,
-    "CRP":                         65,
-    "PCR grippe":                  65,
-    "Prélèvement pharyngé":        45,
-    "Radiographie pulmonaire":     90,
+    "NFS":                         20,
+    "CRP":                         25,
+    "PCR grippe":                  30,
+    "Prélèvement pharyngé":        35,
+    "Radiographie pulmonaire":     70,
     "Scanner thoracique":         180,
-    "Culture des expectorations":  55,
-    "ASLO":                        35,
-    "Spirométrie":                 75,
-    "Tests allergologiques":      110,
-    "ECG":                         60,
-    "Échocardiographie":          130,
-    "Test Helicobacter pylori":    50,
-    "Fibroscopie gastrique":      220,
-    "Ferritine":                   40,
-    "Vitamine B12":                40,
-    "IgE totales":                 55,
-    "Troponine":                   45,
-    "Holter ECG":                 110,
+    "Culture des expectorations":  45,
+    "ASLO":                        22,
+    "Spirométrie":                 50,
+    "Tests allergologiques":       80,
+    "ECG":                         45,
+    "Échocardiographie":          100,
+    "Test Helicobacter pylori":    30,
+    "Fibroscopie gastrique":      180,
+    "Ferritine":                   15,
+    "Vitamine B12":                15,
+    "IgE totales":                 35,
+    "Troponine":                   30,
+    "Holter ECG":                  80,
 }
 
 # Explication de chaque analyse (langue simple)
@@ -82,33 +85,43 @@ TEST_EXPLANATIONS: dict[str, str] = {
 # ── Facteur de variabilité des prix (min/max réaliste) ──────────────────────
 # Chaque analyse a une fourchette basée sur les tarifs publics/privés en France
 TEST_COSTS_MIN: dict[str, int] = {
-    "NFS": 35, "CRP": 50, "PCR grippe": 55, "Prélèvement pharyngé": 35,
-    "Radiographie pulmonaire": 70, "Scanner thoracique": 150,
-    "Culture des expectorations": 45, "ASLO": 28, "Spirométrie": 60,
-    "Tests allergologiques": 90, "ECG": 45, "Échocardiographie": 110,
-    "Test Helicobacter pylori": 40, "Fibroscopie gastrique": 180,
-    "Ferritine": 32, "Vitamine B12": 32, "IgE totales": 45,
-    "Troponine": 35, "Holter ECG": 90,
+    "NFS": 18, "CRP": 22, "PCR grippe": 25, "Prélèvement pharyngé": 30,
+    "Radiographie pulmonaire": 60, "Scanner thoracique": 150,
+    "Culture des expectorations": 40, "ASLO": 18, "Spirométrie": 40,
+    "Tests allergologiques": 65, "ECG": 40, "Échocardiographie": 85,
+    "Test Helicobacter pylori": 25, "Fibroscopie gastrique": 150,
+    "Ferritine": 12, "Vitamine B12": 12, "IgE totales": 28,
+    "Troponine": 25, "Holter ECG": 65,
 }
 TEST_COSTS_MAX: dict[str, int] = {
-    "NFS": 65, "CRP": 85, "PCR grippe": 80, "Prélèvement pharyngé": 60,
-    "Radiographie pulmonaire": 120, "Scanner thoracique": 220,
-    "Culture des expectorations": 70, "ASLO": 50, "Spirométrie": 100,
-    "Tests allergologiques": 140, "ECG": 80, "Échocardiographie": 160,
-    "Test Helicobacter pylori": 65, "Fibroscopie gastrique": 270,
-    "Ferritine": 55, "Vitamine B12": 55, "IgE totales": 70,
-    "Troponine": 60, "Holter ECG": 135,
+    "NFS": 28, "CRP": 32, "PCR grippe": 40, "Prélèvement pharyngé": 45,
+    "Radiographie pulmonaire": 85, "Scanner thoracique": 210,
+    "Culture des expectorations": 55, "ASLO": 30, "Spirométrie": 65,
+    "Tests allergologiques": 100, "ECG": 55, "Échocardiographie": 120,
+    "Test Helicobacter pylori": 40, "Fibroscopie gastrique": 220,
+    "Ferritine": 20, "Vitamine B12": 20, "IgE totales": 45,
+    "Troponine": 38, "Holter ECG": 100,
 }
 
 
-def _cost_range(tests: set[str], costs_min: dict, costs_max: dict) -> tuple[int, int]:
-    lo = sum(costs_min.get(t, TEST_COSTS.get(t, 0)) for t in tests)
-    hi = sum(costs_max.get(t, TEST_COSTS.get(t, 0)) for t in tests)
-    return lo, hi
-
-
-def _fmt_range(lo: int, hi: int) -> str:
-    return f"~{lo}€ – {hi}€"
+# Probabilité de prescription dans un parcours standard élargi (hors essentielles)
+# Représente la fréquence réelle d'ordonnance en médecine générale en France
+TEST_PRESCRIPTION_PROBABILITY: dict[str, float] = {
+    "PCR grippe":                  0.50,
+    "Prélèvement pharyngé":        0.60,
+    "Scanner thoracique":          0.30,   # rarement prescrit en 1ère intention
+    "Culture des expectorations":  0.35,
+    "ASLO":                        0.55,
+    "Spirométrie":                 0.50,
+    "Tests allergologiques":       0.45,
+    "Échocardiographie":           0.40,
+    "Fibroscopie gastrique":       0.30,
+    "Ferritine":                   0.65,
+    "Vitamine B12":                0.55,
+    "IgE totales":                 0.50,
+    "Troponine":                   0.70,
+    "Holter ECG":                  0.28,
+}
 
 # Scénarios prêts pour la démo
 DEMO_SCENARIOS: dict[str, list[str]] = {
@@ -365,51 +378,62 @@ def analyze(symptoms: list[str]) -> AnalyzeResponse:
         deduped.append(Diagnosis(name=d.name, probability=max(prob, 0.10), key_symptoms=d.key_symptoms))
     diagnoses = deduped
 
-    # Collecte des analyses pour les 3 premiers diagnostics
-    # Bilan de base (toujours en recommandé si présent)
-    BASE_REQUIRED = {"NFS", "CRP"}
-
-    all_tests: set[str] = set()
+    # Collecte des analyses : required = essentielles, optional = complémentaires
+    required_set: set[str] = set()
+    optional_set: set[str] = set()
     for diag in diagnoses:
         tests = DIAGNOSIS_TESTS.get(diag.name, {})
-        all_tests.update(tests.get("required", []))
-        all_tests.update(tests.get("optional", []))
+        required_set.update(tests.get("required", []))
+        optional_set.update(tests.get("optional", []))
+    optional_set -= required_set  # pas de doublons
 
-    # recommandées = uniquement le bilan de base parmi les analyses indiquées
-    # optionnelles = tout le reste
-    required_set = all_tests & BASE_REQUIRED
-    optional_set = all_tests - BASE_REQUIRED
+    standard_set = required_set | optional_set
+    required_list = sorted(required_set)
+    optional_list = sorted(optional_set)
 
-    standard_set   = all_tests
-    standard_cost  = sum(TEST_COSTS.get(t, 0) for t in standard_set)
-    optimized_cost = sum(TEST_COSTS.get(t, 0) for t in required_set)
+    # Coûts exacts par scénario (pas de fourchette)
+    # optimized = consultation + essentielles (100%)
+    # standard  = consultation + essentielles (100%) + complémentaires × probabilité de prescription
+    required_tests_cost = sum(TEST_COSTS.get(t, 0) for t in required_set)
+    optional_weighted   = sum(
+        TEST_COSTS.get(t, 0) * TEST_PRESCRIPTION_PROBABILITY.get(t, 0.50)
+        for t in optional_set
+    )
+    optimized_cost = CONSULTATION_COST + required_tests_cost
+    standard_cost  = round(CONSULTATION_COST + required_tests_cost + optional_weighted)
+    savings        = standard_cost - optimized_cost
     optional_cost  = sum(TEST_COSTS.get(t, 0) for t in optional_set)
-    required_list  = sorted(required_set)
-    optional_list  = sorted(optional_set)
+
+    # Probabilités de prescription par test (pour affichage dans le détail)
+    test_probabilities: dict[str, int] = {
+        t: round(TEST_PRESCRIPTION_PROBABILITY.get(t, 1.0) * 100)
+        for t in standard_set
+    }
 
     return AnalyzeResponse(
         diagnoses=diagnoses,
         tests=Tests(required=required_list, optional=optional_list),
-        cost=Cost(required=optimized_cost, optional=optional_cost, savings=optional_cost),
+        cost=Cost(required=optimized_cost, optional=optional_cost, savings=savings),
         explanation=_build_explanation(list(symptom_set), diagnoses, required_list),
         comparison=Comparison(
             standard_tests=sorted(standard_set),
             standard_cost=standard_cost,
             optimized_tests=required_list,
             optimized_cost=optimized_cost,
-            savings=standard_cost - optimized_cost,
+            savings=savings,
             savings_multiplier=(
                 f"~{round(standard_cost / optimized_cost, 1)}x moins cher"
                 if optimized_cost > 0 else "—"
             ),
-            standard_range=_fmt_range(*_cost_range(standard_set, TEST_COSTS_MIN, TEST_COSTS_MAX)),
-            optimized_range=_fmt_range(*_cost_range(required_set, TEST_COSTS_MIN, TEST_COSTS_MAX)),
-            savings_range=_fmt_range(
-                *(_cost_range(standard_set, TEST_COSTS_MIN, TEST_COSTS_MAX)[0] - _cost_range(required_set, TEST_COSTS_MIN, TEST_COSTS_MAX)[1],
-                  _cost_range(standard_set, TEST_COSTS_MIN, TEST_COSTS_MAX)[1] - _cost_range(required_set, TEST_COSTS_MIN, TEST_COSTS_MAX)[0])
-            ) if required_set else "—",
-            cost_note="Exemple basé sur un cas clinique courant — prix indicatifs (marché France / UE)",
+            cost_note=(
+                "Simulation économique basée sur un parcours diagnostique standard observé en France. "
+                "Consultation médecin généraliste : tarif Assurance Maladie. "
+                "Autres actes : valeurs configurables France pour MVP, "
+                "à affiner par mapping NABM/CCAM."
+            ),
         ),
         confidence_level=_confidence_level(diagnoses, len(symptom_set)),
         urgency_level=_urgency_level(diagnoses),
+        test_explanations={t: TEST_EXPLANATIONS[t] for t in required_list if t in TEST_EXPLANATIONS},
+        test_probabilities=test_probabilities,
     )

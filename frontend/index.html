@@ -143,6 +143,28 @@
     .sym-tag:hover { background: #fef2f2; border-color: #fecaca; color: #dc2626; }
     .input-actions { display: flex; justify-content: flex-end; }
 
+    /* ── Quick symptom chips ─────────────────────────────── */
+    .sym-chips-wrap { margin-bottom: 10px; }
+    .sym-chips-label {
+      font-size: .65rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .7px; color: var(--muted-2); margin-bottom: 8px;
+    }
+    .sym-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .sym-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: .78rem; font-weight: 500; padding: 5px 12px;
+      background: #f8fafc; border: 1.5px solid var(--border);
+      color: var(--muted); border-radius: 99px; cursor: pointer;
+      font-family: inherit; transition: all .14s; line-height: 1;
+      user-select: none;
+    }
+    .sym-chip:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-pale); }
+    .sym-chip.active {
+      background: var(--blue); border-color: var(--blue);
+      color: white; box-shadow: 0 2px 6px rgba(37,99,235,.25);
+    }
+    .sym-chip.active:hover { background: var(--blue-h); border-color: var(--blue-h); }
+
     /* ── Urgency badge ───────────────────────────────────── */
     .urgency-badge {
       display: inline-flex; align-items: center; gap: 5px;
@@ -615,11 +637,16 @@
     <div class="block-label">Scénarios cliniques</div>
     <div class="sc-grid" id="chips"></div>
 
-    <div class="block-label" style="margin-top:4px">Ou décrivez librement</div>
+    <div class="block-label" style="margin-top:4px">Décrivez vos symptômes</div>
     <textarea class="unified-textarea" id="unified-input"
-      placeholder="Décrivez vos symptômes — ex : j'ai de la fièvre depuis 2 jours, je tousse et je suis fatigué..."
+      placeholder="fièvre, toux, douleur thoracique..."
       oninput="onTextInput()"
       onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();runFromSymptoms();}"></textarea>
+
+    <div class="sym-chips-wrap">
+      <div class="sym-chips-label">Ajouter un symptôme</div>
+      <div class="sym-chips" id="sym-chips"></div>
+    </div>
 
     <div class="tags-wrap" id="tags-wrap">
       <div class="tags-label">Symptômes détectés — cliquer pour retirer</div>
@@ -647,15 +674,16 @@
 </footer>
 
 <script>
-  /* ── Prix de référence (marché France / UE) ── */
+  /* ── Prix de référence — tarifs orientatifs France (Assurance Maladie) ── */
+  window._consultationCost = 30;
   window._testCosts = {
-    'NFS': 45, 'CRP': 65, 'PCR grippe': 65, 'Prélèvement pharyngé': 45,
-    'Radiographie pulmonaire': 90, 'Scanner thoracique': 180,
-    'Culture des expectorations': 55, 'ASLO': 35, 'Spirométrie': 75,
-    'Tests allergologiques': 110, 'ECG': 60, 'Échocardiographie': 130,
-    'Test Helicobacter pylori': 50, 'Fibroscopie gastrique': 220,
-    'Ferritine': 40, 'Vitamine B12': 40, 'IgE totales': 55,
-    'Troponine': 45, 'Holter ECG': 110,
+    'NFS': 20, 'CRP': 25, 'PCR grippe': 30, 'Prélèvement pharyngé': 35,
+    'Radiographie pulmonaire': 70, 'Scanner thoracique': 180,
+    'Culture des expectorations': 45, 'ASLO': 22, 'Spirométrie': 50,
+    'Tests allergologiques': 80, 'ECG': 45, 'Échocardiographie': 100,
+    'Test Helicobacter pylori': 30, 'Fibroscopie gastrique': 180,
+    'Ferritine': 15, 'Vitamine B12': 15, 'IgE totales': 35,
+    'Troponine': 30, 'Holter ECG': 80,
   };
 
   /* ── Icônes des scénarios ── */
@@ -678,36 +706,80 @@
     check:  `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
   };
 
-  /* ── Dictionnaire de symptômes (côté client) ── */
+  /* ── Dictionnaire de symptômes (côté client, multilingue) ── */
   const SYMPTOM_DICT = (() => {
-    // aliases → canonical
+    // aliases (FR / EN / RU) → canonical (nom utilisé par le moteur)
     const aliases = {
-      "température": "fièvre", "température élevée": "fièvre",
-      "de la fièvre": "fièvre", "j'ai de la fièvre": "fièvre",
-      "toux sèche": "toux", "toux grasse": "toux", "je tousse": "toux",
-      "nez qui coule": "rhinorrhée", "écoulement nasal": "rhinorrhée", "nez bouché": "rhinorrhée",
-      "maux de tête": "céphalées", "mal à la tête": "céphalées", "migraine": "céphalées",
-      "gorge": "mal de gorge", "douleur en avalant": "mal de gorge", "déglutition douloureuse": "mal de gorge",
-      "essoufflé": "essoufflement", "souffle court": "essoufflement", "manque de souffle": "essoufflement",
-      "douleur au thorax": "douleur thoracique", "douleur à la poitrine": "douleur thoracique", "mal à la poitrine": "douleur thoracique",
-      "fatigué": "fatigue", "épuisement": "fatigue", "asthénie": "fatigue",
-      "pas d'appétit": "perte d'appétit", "anorexie": "perte d'appétit",
-      "nausée": "nausées", "envie de vomir": "nausées",
-      "éternuement": "éternuements",
+      // fièvre
+      "fièvre": "fièvre", "fievre": "fièvre", "température": "fièvre",
+      "température élevée": "fièvre", "temperature": "fièvre", "de la fièvre": "fièvre",
+      "j'ai de la fièvre": "fièvre", "жар": "fièvre", "температура": "fièvre", "fever": "fièvre",
+      // toux
+      "toux": "toux", "toux sèche": "toux", "toux grasse": "toux", "je tousse": "toux",
+      "кашель": "toux", "cough": "toux",
+      // fatigue
+      "fatigue": "fatigue", "fatigue générale": "fatigue", "fatigué": "fatigue",
+      "épuisement": "fatigue", "asthénie": "fatigue",
+      "слабость": "fatigue", "усталость": "fatigue",
+      // douleur thoracique
+      "douleur thoracique": "douleur thoracique", "douleur poitrine": "douleur thoracique",
+      "douleur à la poitrine": "douleur thoracique", "douleur au thorax": "douleur thoracique",
+      "mal poitrine": "douleur thoracique", "mal à la poitrine": "douleur thoracique",
+      "боль в груди": "douleur thoracique", "chest pain": "douleur thoracique",
+      // essoufflement
+      "essoufflement": "essoufflement", "essoufflé": "essoufflement",
+      "difficulté à respirer": "essoufflement", "dyspnée": "essoufflement",
+      "souffle court": "essoufflement", "manque de souffle": "essoufflement",
+      "одышка": "essoufflement", "тяжело дышать": "essoufflement", "shortness of breath": "essoufflement",
+      // céphalées
+      "céphalées": "céphalées", "maux de tête": "céphalées", "céphalée": "céphalées",
+      "mal à la tête": "céphalées", "migraine": "céphalées",
+      "головная боль": "céphalées", "headache": "céphalées",
+      // nausées
+      "nausées": "nausées", "nausée": "nausées", "envie de vomir": "nausées",
+      "тошнота": "nausées", "nausea": "nausées",
+      // rhinorrhée
+      "rhinorrhée": "rhinorrhée", "nez qui coule": "rhinorrhée",
+      "écoulement nasal": "rhinorrhée", "nez bouché": "rhinorrhée",
+      // mal de gorge
+      "mal de gorge": "mal de gorge", "gorge douloureuse": "mal de gorge",
+      "douleur en avalant": "mal de gorge", "déglutition douloureuse": "mal de gorge",
+      // éternuements
+      "éternuements": "éternuements", "éternuement": "éternuements",
+      // irritation de la gorge
+      "irritation de la gorge": "irritation de la gorge",
       "gorge qui gratte": "irritation de la gorge", "irritation gorge": "irritation de la gorge",
+      // perte d'appétit
+      "perte d'appétit": "perte d'appétit", "pas d'appétit": "perte d'appétit",
+      "anorexie": "perte d'appétit", "нет аппетита": "perte d'appétit", "loss of appetite": "perte d'appétit",
+      // frissons → fièvre (signe d'accompagnement fréquent)
+      "frissons": "fièvre", "озноб": "fièvre", "chills": "fièvre",
+      // douleur musculaire → fatigue (proxy)
+      "douleur musculaire": "fatigue", "боль в мышцах": "fatigue", "muscle pain": "fatigue",
+      // vertiges → céphalées (proxy)
+      "vertiges": "céphalées", "vertige": "céphalées", "головокружение": "céphalées", "dizziness": "céphalées",
+      // palpitations
+      "palpitations": "palpitations", "palpitations cardiaques": "palpitations",
+      "сердцебиение": "palpitations",
+      // vomissements → nausées
+      "vomissements": "nausées", "рвота": "nausées", "vomiting": "nausées",
+      // diarrhée, douleur abdominale → nausées (proxy pour gastrite)
+      "diarrhée": "nausées", "понос": "nausées", "diarrhea": "nausées",
+      "douleur abdominale": "nausées", "mal au ventre": "nausées",
+      "боль в животе": "nausées", "abdominal pain": "nausées",
     };
-    // canonical names also map to themselves
-    const canonicals = [
-      "fièvre","toux","rhinorrhée","céphalées","fatigue","essoufflement",
-      "douleur thoracique","mal de gorge","éternuements","irritation de la gorge",
-      "nausées","perte d'appétit",
-    ];
-    for (const c of canonicals) aliases[c] = c;
     return aliases;
   })();
 
   /* Keys sorted by length desc so "douleur à la poitrine" matches before "gorge" */
   const _DICT_KEYS = Object.keys(SYMPTOM_DICT).sort((a, b) => b.length - a.length);
+
+  /* ── Symptômes disponibles comme chips (canoniques du moteur) ── */
+  const QUICK_SYMPTOMS = [
+    "fièvre", "toux", "fatigue", "essoufflement", "douleur thoracique",
+    "céphalées", "rhinorrhée", "mal de gorge", "nausées", "perte d'appétit",
+    "éternuements", "irritation de la gorge", "palpitations",
+  ];
 
   /* ── État ── */
   let currentSymptoms = new Set();
@@ -723,20 +795,43 @@
     return found;
   }
 
-  /* ── Rendu des tags ── */
+  /* ── Rendu des quick chips ── */
+  function renderChips() {
+    const box = document.getElementById('sym-chips');
+    if (!box) return;
+    box.innerHTML = QUICK_SYMPTOMS.map(s => {
+      const active = currentSymptoms.has(s) ? ' active' : '';
+      const safe = s.replace(/'/g, "\\'");
+      return `<button class="sym-chip${active}" onclick="toggleChip('${safe}')">${s}</button>`;
+    }).join('');
+  }
+
+  /* ── Toggle d'un chip ── */
+  function toggleChip(name) {
+    if (currentSymptoms.has(name)) {
+      currentSymptoms.delete(name);
+    } else {
+      currentSymptoms.add(name);
+    }
+    renderTags();
+    renderChips();
+  }
+
+  /* ── Rendu des tags (symptômes détectés) ── */
   function renderTags() {
     const wrap = document.getElementById('tags-wrap');
     const tagsEl = document.getElementById('sym-tags');
-    if (!currentSymptoms.size) { wrap.style.display = 'none'; return; }
+    if (!currentSymptoms.size) { wrap.style.display = 'none'; renderChips(); return; }
     wrap.style.display = 'block';
     tagsEl.innerHTML = [...currentSymptoms].sort().map(s =>
-      `<button class="sym-tag" onclick="removeSymptom(this,'${s.replace(/'/g,"\\'")}')">${s
+      `<button class="sym-tag" onclick="removeSymptom('${s.replace(/'/g,"\\'")}')">${s
         }<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg
       ></button>`
     ).join('');
+    renderChips();
   }
 
-  function removeSymptom(el, name) {
+  function removeSymptom(name) {
     currentSymptoms.delete(name);
     renderTags();
   }
@@ -802,9 +897,8 @@
           document.getElementById('unified-input').value = s.symptoms.join(', ');
           box.querySelectorAll('.sc-card').forEach(c => c.classList.remove('on'));
           btn.classList.add('on');
-          currentSymptoms = detectSymptoms(s.symptoms.join(', '));
+          currentSymptoms = new Set(s.symptoms);
           renderTags();
-          runFromSymptoms();
         };
         box.appendChild(btn);
       });
@@ -854,8 +948,16 @@
       'modéré': 'background:var(--amber-pale);color:var(--amber);border:1px solid var(--amber-light)',
       'élevé':  'background:#fef2f2;color:#dc2626;border:1px solid #fecaca',
     };
-    const confBadge = `<span style="display:inline-flex;align-items:center;gap:5px;font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:3px 10px;border-radius:99px;${confColors[d.confidence_level]||confColors['modéré']}">${ICO.check} Niveau de confiance : ${d.confidence_level}</span>`;
-    const urgBadge  = `<span style="display:inline-flex;align-items:center;gap:5px;font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:3px 10px;border-radius:99px;${urgColors[d.urgency_level]||urgColors['faible']}">Urgence : ${d.urgency_level}</span>`;
+    const confBadge = `
+      <div style="display:flex;flex-direction:column;gap:3px">
+        <span style="display:inline-flex;align-items:center;gap:5px;font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:3px 10px;border-radius:99px;${confColors[d.confidence_level]||confColors['modéré']}">${ICO.check} Niveau de confiance : ${d.confidence_level}</span>
+        <span style="font-size:.67rem;color:var(--muted-2);padding-left:4px">Fiabilité du résultat basée sur la cohérence des symptômes fournis</span>
+      </div>`;
+    const urgBadge = `
+      <div style="display:flex;flex-direction:column;gap:3px">
+        <span style="display:inline-flex;align-items:center;gap:5px;font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:3px 10px;border-radius:99px;${urgColors[d.urgency_level]||urgColors['faible']}">Urgence : ${d.urgency_level}</span>
+        <span style="font-size:.67rem;color:var(--muted-2);padding-left:4px">En cas de doute ou d'aggravation → consulter un médecin</span>
+      </div>`;
 
     /* Diagnoses */
     const diagHtml = d.diagnoses.map((x, i) => {
@@ -884,15 +986,12 @@
       ? d.tests.optional.map(t => `<span class="badge opt">${t}</span>`).join('')
       : `<span class="no-tests">—</span>`;
 
-    /* Cost */
+    /* Cost — valeurs exactes par scénario (pas de fourchette) */
     const std  = d.comparison.standard_cost;
     const opt  = d.comparison.optimized_cost;
     const save = d.comparison.savings;
     const mult = d.comparison.savings_multiplier;
-    const std_range  = d.comparison.standard_range  || `~€${std}`;
-    const opt_range  = d.comparison.optimized_range || `~€${opt}`;
-    const save_range = d.comparison.savings_range   || `~€${save}`;
-    const cost_note  = d.comparison.cost_note || "Estimation basée sur des prix moyens du marché en France / UE.";
+    const cost_note = d.comparison.cost_note || "Simulation économique basée sur un parcours diagnostique standard observé en France.";
 
     out.innerHTML = `
       <div class="section-divider">Résultat de l'analyse</div>
@@ -900,7 +999,7 @@
       <div class="grid-2">
         <div class="card">
           <div class="card-title">Diagnostics probables</div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">${confBadge}${urgBadge}</div>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">${confBadge}${urgBadge}</div>
           ${diagHtml}
           ${whyHtml}
         </div>
@@ -916,8 +1015,16 @@
             <div class="badges">${optBadges}</div>
           </div>
           <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
-            <div style="font-size:.68rem;color:var(--muted-2);font-weight:700;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">Pourquoi ces analyses ?</div>
-            <div style="font-size:.82rem;color:var(--muted);line-height:1.65">${d.explanation}</div>
+            <div style="font-size:.68rem;color:var(--muted-2);font-weight:700;text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px">Pourquoi ces analyses ?</div>
+            <div style="display:flex;flex-direction:column;gap:7px">
+              ${Object.entries(d.test_explanations||{}).map(([t,expl]) =>
+                `<div style="font-size:.8rem;color:var(--text-2);line-height:1.5">
+                  <span style="font-weight:600;color:var(--text)">${t}</span>
+                  <span style="color:var(--muted-2)"> → </span>
+                  <span>${expl}</span>
+                </div>`
+              ).join('')}
+            </div>
           </div>
         </div>
       </div>
@@ -937,15 +1044,15 @@
         </div>
         <div class="cost-cols">
           <div class="cost-col before">
-            <div class="cost-col-lbl">Parcours standard</div>
-            <div class="cost-col-sub">examens souvent prescrits</div>
-            <div class="cost-num" style="font-size:1.9rem;letter-spacing:-1px;">${std_range}</div>
+            <div class="cost-col-lbl">Parcours standard élargi</div>
+            <div class="cost-col-sub">consultation + examens courants</div>
+            <div class="cost-num" style="font-size:1.9rem;letter-spacing:-1px;">${std} €</div>
           </div>
           <div class="cost-arrow-col">${ICO.arrow}</div>
           <div class="cost-col after">
             <div class="cost-col-lbl">Approche optimisée</div>
-            <div class="cost-col-sub">uniquement les analyses nécessaires</div>
-            <div class="cost-num" style="font-size:1.9rem;letter-spacing:-1px;">${opt_range}</div>
+            <div class="cost-col-sub">consultation + analyses essentielles</div>
+            <div class="cost-num" style="font-size:1.9rem;letter-spacing:-1px;">${opt} €</div>
           </div>
         </div>
         <div class="cost-savings">
@@ -954,7 +1061,7 @@
             <span class="cs-label">Économie estimée</span>
           </div>
           <div class="cs-right">
-            <span class="cs-val">${save_range}</span>
+            <span class="cs-val">${save} €</span>
             <span class="cs-mult">${mult}</span>
           </div>
         </div>
@@ -963,13 +1070,23 @@
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
         <div class="detail-body" id="detail-body">
+          <div class="detail-row">
+            <span>Consultation médecin généraliste</span>
+            <span>${window._consultationCost} €</span>
+          </div>
           ${[...d.comparison.standard_tests].map(t => {
             const isOpt = !d.tests.required.includes(t);
-            return `<div class="detail-row"><span>${t}${isOpt ? ' <span style="font-size:.7rem;color:var(--muted-2)">(complémentaire)</span>' : ''}</span><span>~${window._testCosts?.[t] || '—'}€</span></div>`;
+            const prob  = d.test_probabilities?.[t];
+            const price = window._testCosts?.[t] ?? '—';
+            const probTag = isOpt && prob != null
+              ? ` <span style="font-size:.68rem;color:var(--muted-2);font-weight:500">(prescrit dans ~${prob}% des cas)</span>`
+              : '';
+            return `<div class="detail-row"><span>${t}${probTag}</span><span>${price} €</span></div>`;
           }).join('')}
         </div>
         <div class="cost-note">
-          Estimation basée sur des prix moyens du marché (France / UE). Les montants sont indicatifs.
+          Simulation économique basée sur un parcours diagnostique standard observé en France.<br>
+          Consultation médecin généraliste : tarif Assurance Maladie. Autres actes : valeurs configurables France pour MVP.
         </div>
       </div>
 
@@ -982,7 +1099,7 @@
         Les analyses recommandées couvrent le bilan de base dans la plupart des cas courants. En cas de complications, la liste peut être étendue par un médecin.
       </div>
 
-      <div class="trust-row">
+      <div class="trust-row" style="margin-bottom:32px">
         <div class="trust-item">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           Approche indicative basée sur des scénarios standards
@@ -1008,7 +1125,8 @@
           <ul class="usage-list">
             <li><span class="usage-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>Patients</li>
             <li><span class="usage-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>Médecins généralistes</li>
-            <li><span class="usage-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span>Assurances &amp; systèmes publics</li>
+            <li><span class="usage-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span>Assurances</li>
+            <li><span class="usage-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg></span>Systèmes publics</li>
           </ul>
         </div>
       </div>
@@ -1032,6 +1150,7 @@
   }
 
   loadChips();
+  renderChips();
 </script>
 </body>
 </html>

@@ -60,7 +60,7 @@ def test_analyze_comparison_has_all_fields():
     data = client.post("/v1/analyze", json={"symptoms": SYMPTOMS}).json()
     c = data["comparison"]
     for field in ("standard_tests", "standard_cost", "optimized_tests",
-                  "optimized_cost", "savings", "standard_range", "optimized_range"):
+                  "optimized_cost", "savings", "savings_multiplier", "cost_note"):
         assert field in c
 
 
