@@ -675,16 +675,9 @@
 
 <script>
   /* ── Prix de référence — tarifs orientatifs France (Assurance Maladie) ── */
-  window._consultationCost = 30;
-  window._testCosts = {
-    'NFS': 20, 'CRP': 25, 'PCR grippe': 30, 'Prélèvement pharyngé': 35,
-    'Radiographie pulmonaire': 70, 'Scanner thoracique': 180,
-    'Culture des expectorations': 45, 'ASLO': 22, 'Spirométrie': 50,
-    'Tests allergologiques': 80, 'ECG': 45, 'Échocardiographie': 100,
-    'Test Helicobacter pylori': 30, 'Fibroscopie gastrique': 180,
-    'Ferritine': 15, 'Vitamine B12': 15, 'IgE totales': 35,
-    'Troponine': 30, 'Holter ECG': 80,
-  };
+  /* Prix chargés depuis le serveur — ne pas modifier ici */
+  window._consultationCost = null;
+  window._testCosts = null;
 
   /* ── Icônes des scénarios ── */
   const SC_ICONS = {
@@ -1072,12 +1065,12 @@
         <div class="detail-body" id="detail-body">
           <div class="detail-row">
             <span>Consultation médecin généraliste</span>
-            <span>${window._consultationCost} €</span>
+            <span>${d.consultation_cost ?? 30} €</span>
           </div>
           ${[...d.comparison.standard_tests].map(t => {
             const isOpt = !d.tests.required.includes(t);
             const prob  = d.test_probabilities?.[t];
-            const price = window._testCosts?.[t] ?? '—';
+            const price = d.test_costs?.[t] ?? '—';
             const probTag = isOpt && prob != null
               ? ` <span style="font-size:.68rem;color:var(--muted-2);font-weight:500">(prescrit dans ~${prob}% des cas)</span>`
               : '';
