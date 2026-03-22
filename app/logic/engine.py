@@ -120,6 +120,56 @@ DEMO_SCENARIOS: dict[str, list[str]] = {
     "Allergie":   ["rhinorrhée", "éternuements", "irritation de la gorge"],
 }
 
+# ── Alias de saisie libre ────────────────────────────────────────────────────
+ALIASES: dict[str, str] = {
+    "température":            "fièvre",
+    "température élevée":    "fièvre",
+    "de la fièvre":          "fièvre",
+    "j'ai de la fièvre":     "fièvre",
+    "toux sèche":            "toux",
+    "toux grasse":           "toux",
+    "je tousse":             "toux",
+    "nez qui coule":         "rhinorrhée",
+    "écoulement nasal":      "rhinorrhée",
+    "nez bouché":            "rhinorrhée",
+    "maux de tête":          "céphalées",
+    "mal à la tête":         "céphalées",
+    "migraine":              "céphalées",
+    "gorge":                 "mal de gorge",
+    "douleur en avalant":    "mal de gorge",
+    "déglutition douloureuse": "mal de gorge",
+    "essoufflé":             "essoufflement",
+    "souffle court":         "essoufflement",
+    "manque de souffle":     "essoufflement",
+    "douleur au thorax":     "douleur thoracique",
+    "douleur à la poitrine": "douleur thoracique",
+    "mal à la poitrine":     "douleur thoracique",
+    "fatigué":               "fatigue",
+    "épuisement":            "fatigue",
+    "asthénie":              "fatigue",
+    "pas d'appétit":         "perte d'appétit",
+    "anorexie":              "perte d'appétit",
+    "nausée":                "nausées",
+    "envie de vomir":        "nausées",
+    "éternuement":           "éternuements",
+    "gorge qui gratte":      "irritation de la gorge",
+    "irritation gorge":      "irritation de la gorge",
+}
+
+
+def parse_symptoms(text: str) -> list[str]:
+    """Détecte les symptômes connus dans un texte libre (aliases + noms directs)."""
+    text_lower = text.lower()
+    detected: set[str] = set()
+    for alias in sorted(ALIASES, key=len, reverse=True):
+        if alias in text_lower:
+            detected.add(ALIASES[alias])
+    for symptom in SYMPTOM_DIAGNOSES:
+        if symptom in text_lower:
+            detected.add(symptom)
+    return sorted(detected)
+
+
 # ── Couche 1 : spécificité des symptômes ────────────────────────────────────
 # Un symptôme pointant vers moins de diagnostics porte plus d'information.
 _MAX_DIAG_COUNT = max(len(w) for w in SYMPTOM_DIAGNOSES.values())
@@ -175,6 +225,20 @@ _DIAG_ARTICLE: dict[str, str] = {
     "Hypertension": "une", "Gastrite": "une", "Anémie": "une",
     "Allergie": "une", "Angor": "un",
 }
+
+
+# Diagnostics nécessitant une attention urgente
+_URGENT_DIAGNOSES = {"Pneumonie", "Angor"}
+
+def _urgency_level(diagnoses: list) -> str:
+    if not diagnoses:
+        return "faible"
+    top = diagnoses[0]
+    if top.name in _URGENT_DIAGNOSES and top.probability >= 0.40:
+        return "élevé"
+    if top.probability >= 0.55:
+        return "modéré"
+    return "faible"
 
 
 # ── Niveau de confiance ──────────────────────────────────────────────────────
@@ -245,6 +309,7 @@ def analyze(symptoms: list[str]) -> AnalyzeResponse:
             cost=Cost(required=0, optional=0, savings=0),
             explanation="Les symptômes indiqués ne permettent pas d'identifier un diagnostic. Veuillez consulter un médecin.",
             comparison=empty_comparison,
+            urgency_level="faible",
         )
 
     # Normalisation : quelle fraction des indices possibles avons-nous recueillis ?
@@ -270,10 +335,17 @@ def analyze(symptoms: list[str]) -> AnalyzeResponse:
     _MAX_PROB = 0.75
     probs = {name: min(prob, _MAX_PROB) for name, prob in probs.items()}
 
+    # Symptômes clés par diagnostic (ceux qui ont contribué au score)
+    key_symptoms_map: dict[str, list[str]] = {name: [] for name in probs}
+    for sym in symptom_set:
+        for diag in SYMPTOM_DIAGNOSES.get(sym, {}):
+            if diag in key_symptoms_map and sym not in key_symptoms_map[diag]:
+                key_symptoms_map[diag].append(sym)
+
     # Filtrage, tri, top 3
     diagnoses = sorted(
         [
-            Diagnosis(name=name, probability=round(prob, 2))
+            Diagnosis(name=name, probability=round(prob, 2), key_symptoms=key_symptoms_map.get(name, []))
             for name, prob in probs.items()
             if prob >= PROBABILITY_THRESHOLD
         ],
@@ -290,7 +362,7 @@ def analyze(symptoms: list[str]) -> AnalyzeResponse:
             prob = round(deduped[-1].probability - 0.04, 2)
         else:
             prob = d.probability
-        deduped.append(Diagnosis(name=d.name, probability=max(prob, 0.10)))
+        deduped.append(Diagnosis(name=d.name, probability=max(prob, 0.10), key_symptoms=d.key_symptoms))
     diagnoses = deduped
 
     # Collecte des analyses pour les 3 premiers diagnostics
@@ -339,4 +411,5 @@ def analyze(symptoms: list[str]) -> AnalyzeResponse:
             cost_note="Exemple basé sur un cas clinique courant — prix indicatifs (marché France / UE)",
         ),
         confidence_level=_confidence_level(diagnoses, len(symptom_set)),
+        urgency_level=_urgency_level(diagnoses),
     )

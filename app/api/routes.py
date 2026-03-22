@@ -1,46 +1,42 @@
 import logging
 from fastapi import APIRouter, HTTPException
-from app.models.schemas import AnalyzeRequest, AnalyzeResponse
-from app.logic.engine import analyze, DEMO_SCENARIOS
+from app.models.schemas import AnalyzeRequest, AnalyzeResponse, ParseSymptomsRequest
+from app.logic.engine import analyze, parse_symptoms, DEMO_SCENARIOS
 
 router = APIRouter()
 logger = logging.getLogger("clairdiag")
 
 
-@router.get("/health", summary="Проверка работоспособности")
+@router.get("/health")
 def health():
     return {"status": "ok"}
 
 
-@router.post("/analyze", response_model=AnalyzeResponse, summary="Анализ симптомов")
+@router.post("/analyze", response_model=AnalyzeResponse)
 def analyze_symptoms(request: AnalyzeRequest) -> AnalyzeResponse:
-    """
-    Принимает список симптомов, возвращает:
-    - вероятные диагнозы
-    - необходимые и опциональные анализы
-    - стоимость и потенциальную экономию
-    - объяснение для человека
-    - сравнение стандартного и оптимизированного пути
-    """
     symptoms = [s.strip() for s in request.symptoms if s.strip()]
-    logger.info(f"Запрос на анализ: {symptoms}")
+    logger.info(f"Analyse: {symptoms}")
     try:
         result = analyze(symptoms)
-        logger.info(f"Результат: найдено {len(result.diagnoses)} диагнозов")
+        logger.info(f"Résultat: {len(result.diagnoses)} diagnostics")
         return result
     except Exception as e:
-        logger.error(f"Ошибка анализа: {e}")
-        raise HTTPException(status_code=500, detail="Внутренняя ошибка при анализе")
+        logger.error(f"Erreur: {e}")
+        raise HTTPException(status_code=500, detail="Erreur interne")
 
 
-@router.get("/scenarios", summary="Список готовых сценариев для демо")
+@router.post("/parse-symptoms")
+def parse_symptoms_endpoint(request: ParseSymptomsRequest) -> dict:
+    """Détecte les symptômes connus dans un texte libre."""
+    detected = parse_symptoms(request.text)
+    return {"detected": detected, "count": len(detected)}
+
+
+@router.get("/scenarios")
 def get_scenarios() -> dict:
-    """Возвращает готовые сценарии. Можно использовать как вход для POST /v1/analyze."""
     return {
         "scenarios": [
             {"name": name, "symptoms": symptoms}
             for name, symptoms in DEMO_SCENARIOS.items()
         ]
     }
-
-

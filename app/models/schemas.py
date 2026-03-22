@@ -8,15 +8,20 @@ class AnalyzeRequest(BaseModel):
     model_config = {
         "json_schema_extra": {
             "example": {
-                "symptoms": ["насморк", "боль в горле", "слабость"]
+                "symptoms": ["fièvre", "toux", "fatigue"]
             }
         }
     }
 
 
+class ParseSymptomsRequest(BaseModel):
+    text: str
+
+
 class Diagnosis(BaseModel):
     name: str
     probability: float
+    key_symptoms: List[str] = []
 
 
 class Tests(BaseModel):
@@ -36,11 +41,11 @@ class Comparison(BaseModel):
     optimized_tests: List[str]
     optimized_cost: int
     savings: int
-    savings_multiplier: str  # например "~4.5x moins cher"
-    standard_range: str = ""   # "~250€ – 400€"
-    optimized_range: str = ""  # "~40€ – 100€"
-    savings_range: str = ""    # "~150€ – 300€"
-    cost_note: str = ""        # "Exemple basé sur un cas clinique courant"
+    savings_multiplier: str
+    standard_range: str = ""
+    optimized_range: str = ""
+    savings_range: str = ""
+    cost_note: str = ""
 
 
 class AnalyzeResponse(BaseModel):
@@ -49,4 +54,5 @@ class AnalyzeResponse(BaseModel):
     cost: Cost
     explanation: str
     comparison: Comparison
-    confidence_level: str = "modéré"  # "élevé" | "modéré" | "faible"
+    confidence_level: str = "modéré"
+    urgency_level: str = "faible"
