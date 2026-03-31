@@ -27,6 +27,9 @@
       --amber:       #b45309;
       --amber-pale:  #fffbeb;
       --amber-light: #fde68a;
+      --red:         #dc2626;
+      --red-pale:    #fef2f2;
+      --red-light:   #fecaca;
       --r:           14px;
       --r-lg:        20px;
       --sh:          0 4px 24px rgba(0,0,0,.06), 0 1px 4px rgba(0,0,0,.04);
@@ -98,19 +101,6 @@
       font-size: .96rem; color: #94a3b8; line-height: 1.75;
       max-width: 420px; margin: 0 auto;
     }
-    .hero-tag {
-      margin-top: 16px;
-      font-size: .75rem; font-weight: 600; letter-spacing: .5px;
-      color: rgba(147,197,253,.6);
-      text-transform: uppercase;
-    }
-    .hero-positioning {
-      display: inline-block;
-      font-size: .72rem; font-weight: 700; letter-spacing: 1.2px;
-      text-transform: uppercase; color: #60a5fa;
-      background: rgba(96,165,250,.12); border: 1px solid rgba(96,165,250,.2);
-      padding: 5px 16px; border-radius: 99px; margin-bottom: 18px;
-    }
 
     /* ── Unified input ───────────────────────────────────── */
     .unified-textarea {
@@ -165,21 +155,102 @@
     }
     .sym-chip.active:hover { background: var(--blue-h); border-color: var(--blue-h); }
 
+    /* ── Temporal context row (onset + duration) ─────────── */
+    .temporal-row {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+      margin-bottom: 14px;
+    }
+    .temporal-group { display: flex; flex-direction: column; gap: 6px; }
+    .temporal-label {
+      font-size: .65rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .7px; color: var(--muted-2);
+    }
+    .temporal-select {
+      font-family: inherit; font-size: .84rem; color: var(--text);
+      background: #f8fafc; border: 1.5px solid var(--border);
+      border-radius: 10px; padding: 8px 12px; outline: none;
+      cursor: pointer; transition: border-color .15s, background .15s;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+    }
+    .temporal-select:focus { border-color: var(--blue); background-color: white; box-shadow: 0 0 0 3px rgba(37,99,235,.08); }
+
+    /* ── EMERGENCY BANNER (RFE) ──────────────────────────── */
+    .emergency-banner {
+      display: flex; align-items: flex-start; gap: 14px;
+      background: #fef2f2; border: 2px solid #fca5a5;
+      border-radius: var(--r); padding: 18px 20px;
+      margin-bottom: 12px;
+      animation: emergencePulse 1.5s ease-in-out 3;
+    }
+    @keyframes emergencePulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,.3); }
+      50%       { box-shadow: 0 0 0 6px rgba(220,38,38,.0); }
+    }
+    .emergency-icon {
+      width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
+      background: #dc2626; display: flex; align-items: center; justify-content: center;
+    }
+    .emergency-body { flex: 1; }
+    .emergency-title {
+      font-size: .78rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: .8px; color: #991b1b; margin-bottom: 6px;
+    }
+    .emergency-text {
+      font-size: .92rem; font-weight: 600; color: #dc2626; line-height: 1.6;
+      margin-bottom: 8px;
+    }
+    .emergency-call {
+      display: inline-flex; align-items: center; gap: 7px;
+      font-size: .82rem; font-weight: 700;
+      background: #dc2626; color: white;
+      padding: 7px 16px; border-radius: 99px;
+    }
+
+    /* ── TCS level badge ─────────────────────────────────── */
+    .tcs-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: .68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .6px; padding: 4px 12px; border-radius: 99px;
+      border: 1px solid;
+    }
+    .tcs-fort        { background: var(--green-pale); color: var(--green); border-color: var(--green-light); }
+    .tcs-besoin_tests{ background: var(--amber-pale); color: var(--amber); border-color: var(--amber-light); }
+    .tcs-incertain   { background: #f8fafc;           color: var(--muted); border-color: var(--border); }
+
+    /* ── SGL warnings ────────────────────────────────────── */
+    .sgl-warnings {
+      background: var(--amber-pale); border: 1px solid var(--amber-light);
+      border-radius: var(--r); padding: 14px 18px; margin-bottom: 12px;
+    }
+    .sgl-warnings-title {
+      font-size: .67rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .7px; color: var(--amber); margin-bottom: 10px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .sgl-warning-item {
+      display: flex; align-items: flex-start; gap: 8px;
+      font-size: .82rem; color: #92400e; line-height: 1.55;
+      margin-bottom: 6px;
+    }
+    .sgl-warning-item:last-child { margin-bottom: 0; }
+    .sgl-dot { width: 5px; height: 5px; border-radius: 99px; background: var(--amber); flex-shrink: 0; margin-top: 7px; }
+
     /* ── Urgency badge ───────────────────────────────────── */
     .urgency-badge {
       display: inline-flex; align-items: center; gap: 5px;
       font-size: .68rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: .5px; padding: 3px 10px; border-radius: 99px;
-      border: 1px solid;
+      letter-spacing: .5px; padding: 3px 10px; border-radius: 99px; border: 1px solid;
     }
     .urgency-badge.faible  { color: var(--green); background: var(--green-pale); border-color: var(--green-light); }
     .urgency-badge.modéré  { color: var(--amber); background: var(--amber-pale); border-color: var(--amber-light); }
-    .urgency-badge.élevé   { color: var(--red, #dc2626); background: #fef2f2; border-color: #fecaca; }
+    .urgency-badge.élevé   { color: var(--red);   background: var(--red-pale);   border-color: var(--red-light); }
 
     /* ── Pourquoi ce diagnostic ──────────────────────────── */
-    .why-diag {
-      margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border);
-    }
+    .why-diag { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
     .why-diag-title {
       font-size: .68rem; font-weight: 700; text-transform: uppercase;
       letter-spacing: .7px; color: var(--muted-2); margin-bottom: 8px;
@@ -202,9 +273,7 @@
     .detail-toggle:hover { color: var(--blue-h); background: #fafbff; }
     .detail-toggle svg { transition: transform .2s; margin-left: auto; }
     .detail-toggle.open svg { transform: rotate(180deg); }
-    .detail-body {
-      display: none; padding: 0 24px 16px;
-    }
+    .detail-body { display: none; padding: 0 24px 16px; }
     .detail-body.show { display: block; }
     .detail-row {
       display: flex; justify-content: space-between; align-items: center;
@@ -218,7 +287,7 @@
     .impact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
     .impact-card {
       background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--r); padding: 20px 20px; box-shadow: var(--sh-sm);
+      border-radius: var(--r); padding: 20px; box-shadow: var(--sh-sm);
     }
     .impact-card-title {
       font-size: .68rem; font-weight: 700; text-transform: uppercase;
@@ -316,9 +385,7 @@
       font-size: .68rem; font-weight: 700; text-transform: uppercase;
       letter-spacing: 1px; color: var(--muted-2); margin-bottom: 14px;
     }
-    .section-divider::before, .section-divider::after {
-      content: ''; flex: 1; height: 1px; background: var(--border);
-    }
+    .section-divider::before, .section-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
     /* Cards */
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
@@ -337,7 +404,7 @@
     .d-rank {
       width: 22px; height: 22px; border-radius: 7px; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
-      font-size: .65rem; font-weight: 800; letter-spacing: 0;
+      font-size: .65rem; font-weight: 800;
     }
     .d-rank.hi { background: var(--blue); color: white; }
     .d-rank.lo { background: #f1f5f9; color: var(--muted-2); }
@@ -381,8 +448,7 @@
     }
     .cost-head {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 16px 24px;
-      border-bottom: 1px solid var(--border);
+      padding: 16px 24px; border-bottom: 1px solid var(--border);
     }
     .cost-head-title {
       font-size: .68rem; font-weight: 700; text-transform: uppercase;
@@ -407,16 +473,11 @@
     .cost-col.before .cost-col-lbl { color: var(--muted-2); }
     .cost-col.after  .cost-col-lbl { color: var(--green); }
     .cost-col-sub { font-size: .71rem; color: var(--muted-2); margin-bottom: 12px; }
-    .cost-num {
-      font-size: 3.2rem; font-weight: 900; line-height: 1; letter-spacing: -2.5px;
-    }
-    .cost-col.before .cost-num {
-      color: #94a3b8;
-    }
+    .cost-num { font-size: 3.2rem; font-weight: 900; line-height: 1; letter-spacing: -2.5px; }
+    .cost-col.before .cost-num { color: #94a3b8; }
     .cost-col.after .cost-num { color: var(--green); }
     .cost-currency { font-size: 1.4rem; font-weight: 800; vertical-align: super; letter-spacing: 0; }
     .cost-arrow-col { display: flex; align-items: center; justify-content: center; color: var(--muted-2); }
-
     .cost-savings {
       display: flex; align-items: center; justify-content: space-between;
       padding: 15px 24px;
@@ -427,7 +488,6 @@
     .cs-right { display: flex; align-items: baseline; gap: 6px; }
     .cs-val { font-size: 1.15rem; font-weight: 900; color: var(--amber); }
     .cs-mult { font-size: .8rem; font-weight: 600; color: var(--amber); opacity: .8; }
-
     .cost-note {
       padding: 10px 24px; border-top: 1px solid var(--border);
       background: #fafafa;
@@ -465,30 +525,8 @@
       text-align: center; padding: 10px 16px;
     }
 
-    /* ── Confidence badge ────────────────────────────── */
-    .conf-badge {
-      display: inline-flex; align-items: center; gap: 5px;
-      font-size: .68rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: .5px; padding: 3px 10px; border-radius: 99px;
-      margin-bottom: 14px;
-    }
-    .conf-hi  { background: var(--green-pale);  color: var(--green);  border: 1px solid var(--green-light); }
-    .conf-mid { background: var(--amber-pale);  color: var(--amber);  border: 1px solid var(--amber-light); }
-    .conf-lo  { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
-
-    /* ── Consult note ────────────────────────────────── */
-    .consult-note {
-      display: flex; align-items: center; gap: 10px;
-      font-size: .82rem; font-weight: 600; color: #1e40af;
-      background: var(--blue-pale); border: 1px solid var(--blue-light);
-      border-radius: 10px; padding: 11px 16px; margin-bottom: 12px;
-    }
-    .consult-note svg { flex-shrink: 0; color: var(--blue); }
-
     /* ── Trust row ───────────────────────────────────── */
-    .trust-row {
-      display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px;
-    }
+    .trust-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
     .trust-item {
       display: flex; align-items: center; gap: 7px;
       font-size: .78rem; color: var(--muted);
@@ -506,6 +544,13 @@
       border-radius: 10px; padding: 11px 16px; margin-bottom: 12px;
     }
     .disclaimer-row svg { color: var(--blue); flex-shrink: 0; }
+    .consult-note {
+      display: flex; align-items: center; gap: 10px;
+      font-size: .82rem; font-weight: 600; color: #1e40af;
+      background: var(--blue-pale); border: 1px solid var(--blue-light);
+      border-radius: 10px; padding: 11px 16px; margin-bottom: 12px;
+    }
+    .consult-note svg { flex-shrink: 0; color: var(--blue); }
 
     /* ── Skeleton ────────────────────────────────────── */
     .sk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
@@ -516,8 +561,7 @@
     .sk-line {
       height: 13px; border-radius: 99px; margin-bottom: 12px;
       background: linear-gradient(90deg,#f1f5f9 25%,#e8edf4 50%,#f1f5f9 75%);
-      background-size: 300% 100%;
-      animation: shimmer 1.5s infinite;
+      background-size: 300% 100%; animation: shimmer 1.5s infinite;
     }
     .sk-line:last-child { margin-bottom: 0; }
     .sk-line.w-30 { width: 30%; } .sk-line.w-50 { width: 50%; }
@@ -528,8 +572,7 @@
     /* ── Empty / Error ───────────────────────────────── */
     .empty {
       background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--r); padding: 56px 32px; text-align: center;
-      box-shadow: var(--sh-sm);
+      border-radius: var(--r); padding: 56px 32px; text-align: center; box-shadow: var(--sh-sm);
     }
     .empty-icon { margin-bottom: 14px; opacity: .4; }
     .empty-text { color: var(--muted); font-size: .9rem; line-height: 1.7; }
@@ -545,21 +588,16 @@
     @media (max-width: 700px) {
       .wrap { padding: 0 14px 60px; }
       .grid-2, .sk-grid { grid-template-columns: 1fr; }
+      .temporal-row { grid-template-columns: 1fr; }
     }
 
     /* ── Responsive: mobile ──────────────────────────────── */
     @media (max-width: 560px) {
-      /* Nav */
       nav { padding: 0 16px; height: 52px; }
       .nav-badge { display: none; }
-
-      /* Hero */
       .hero { padding: 32px 16px 50px; }
-      .hero-eyebrow { font-size: .65rem; padding: 4px 12px; }
       .hero-title { font-size: 1.75rem; letter-spacing: -.7px; }
       .hero-sub { font-size: .875rem; }
-
-      /* Input card */
       .input-card { padding: 18px 16px; margin-top: -26px; border-radius: 16px; }
       .sc-grid { grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 16px; }
       .sc-card { padding: 9px 11px; gap: 8px; border-radius: 10px; }
@@ -568,12 +606,8 @@
       .go-btn { justify-content: center; width: 100%; border-radius: 10px; }
       .input-actions { justify-content: stretch; }
       .input-actions .go-btn { width: 100%; }
-
-      /* Cards */
       .card { padding: 16px; border-radius: 12px; }
       .card-title { margin-bottom: 14px; }
-
-      /* Cost card */
       .cost-head { flex-direction: column; align-items: flex-start; gap: 8px; padding: 14px 16px; }
       .cost-cols { grid-template-columns: 1fr 1fr; padding: 20px 16px; gap: 0; }
       .cost-col.before { padding-right: 16px; border-right: 1px solid var(--border); }
@@ -583,26 +617,19 @@
       .cost-currency { font-size: 1.1rem; }
       .cost-savings { padding: 12px 16px; }
       .cost-note { padding: 10px 16px; }
-
-      /* Explanation */
       .expl-card { padding: 14px 16px; gap: 10px; }
       .expl-icon-box { display: none; }
-
-      /* Other */
       .value-note { padding: 10px 14px; font-size: .78rem; }
       .section-divider { font-size: .63rem; }
       .impact-grid { grid-template-columns: 1fr; }
+      .emergency-banner { padding: 14px 16px; }
     }
 
-    /* ── Responsive: small phones ────────────────────────── */
     @media (max-width: 380px) {
       .hero-title { font-size: 1.45rem; letter-spacing: -.5px; }
       .sc-grid { grid-template-columns: 1fr; }
       .cost-cols { grid-template-columns: 1fr; }
-      .cost-col.before {
-        padding-right: 0; border-right: none;
-        padding-bottom: 16px; border-bottom: 1px solid var(--border); margin-bottom: 16px;
-      }
+      .cost-col.before { padding-right: 0; border-right: none; padding-bottom: 16px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
       .cost-col.after { padding-left: 0; }
       .cost-num { font-size: 2.8rem; }
     }
@@ -618,7 +645,7 @@
     ClairDiag
   </div>
   <div class="nav-right">
-    <span class="nav-badge">Demo v1.1</span>
+    <span class="nav-badge">CORE v2</span>
     <a class="nav-link" href="/docs" target="_blank">API →</a>
   </div>
 </nav>
@@ -653,6 +680,28 @@
       <div class="sym-tags" id="sym-tags"></div>
     </div>
 
+    <!-- ── Contexte temporel (TCE) ── -->
+    <div class="block-label" style="margin-top:4px">Contexte temporel <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted-2)">(optionnel — améliore la précision)</span></div>
+    <div class="temporal-row">
+      <div class="temporal-group">
+        <label class="temporal-label" for="onset-select">Apparition</label>
+        <select class="temporal-select" id="onset-select">
+          <option value="">— non précisé —</option>
+          <option value="brutal">Soudaine / brutale</option>
+          <option value="progressif">Progressive / graduelle</option>
+        </select>
+      </div>
+      <div class="temporal-group">
+        <label class="temporal-label" for="duration-select">Durée</label>
+        <select class="temporal-select" id="duration-select">
+          <option value="">— non précisée —</option>
+          <option value="hours">Quelques heures</option>
+          <option value="days">Quelques jours</option>
+          <option value="weeks">Plusieurs semaines</option>
+        </select>
+      </div>
+    </div>
+
     <div class="input-actions">
       <button class="go-btn" id="go" onclick="runFromSymptoms()">
         Analyser
@@ -667,18 +716,12 @@
 </div>
 
 <footer>
-  <div class="version-line">Version actuelle : MVP fonctionnel centré sur l'orientation diagnostique, l'explication clinique et l'optimisation des examens.</div>
   Ce système ne remplace pas un avis médical professionnel.<br>
   Les coûts sont estimés sur la base des prix moyens en France / UE et peuvent varier.<br>
   L'objectif est d'illustrer une optimisation des parcours diagnostiques.
 </footer>
 
 <script>
-  /* ── Prix de référence — tarifs orientatifs France (Assurance Maladie) ── */
-  /* Prix chargés depuis le serveur — ne pas modifier ici */
-  window._consultationCost = null;
-  window._testCosts = null;
-
   /* ── Icônes des scénarios ── */
   const SC_ICONS = {
     'Rhume':      `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 8v4l2 2"/></svg>`,
@@ -689,7 +732,6 @@
     'Allergie':   `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>`,
   };
 
-  /* ── SVG icônes UI ── */
   const ICO = {
     warn:   `<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><circle cx="12" cy="17" r=".5" fill="#f59e0b"/></svg>`,
     search: `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>`,
@@ -697,66 +739,47 @@
     arrow:  `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>`,
     info:   `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r=".5" fill="#2563eb"/></svg>`,
     check:  `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+    alert:  `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><circle cx="12" cy="17" r=".5" fill="white"/></svg>`,
+    phone:  `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6 6l.92-.92a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`,
   };
 
-  /* ── Dictionnaire de symptômes (côté client, multilingue) ── */
+  /* ── Dictionnaire de symptômes ── */
   const SYMPTOM_DICT = (() => {
-    // aliases (FR / EN / RU) → canonical (nom utilisé par le moteur)
     const aliases = {
-      // fièvre
       "fièvre": "fièvre", "fievre": "fièvre", "température": "fièvre",
       "température élevée": "fièvre", "temperature": "fièvre", "de la fièvre": "fièvre",
       "j'ai de la fièvre": "fièvre", "жар": "fièvre", "температура": "fièvre", "fever": "fièvre",
-      // toux
       "toux": "toux", "toux sèche": "toux", "toux grasse": "toux", "je tousse": "toux",
       "кашель": "toux", "cough": "toux",
-      // fatigue
       "fatigue": "fatigue", "fatigue générale": "fatigue", "fatigué": "fatigue",
       "épuisement": "fatigue", "asthénie": "fatigue",
       "слабость": "fatigue", "усталость": "fatigue",
-      // douleur thoracique
       "douleur thoracique": "douleur thoracique", "douleur poitrine": "douleur thoracique",
       "douleur à la poitrine": "douleur thoracique", "douleur au thorax": "douleur thoracique",
       "mal poitrine": "douleur thoracique", "mal à la poitrine": "douleur thoracique",
       "боль в груди": "douleur thoracique", "chest pain": "douleur thoracique",
-      // essoufflement
       "essoufflement": "essoufflement", "essoufflé": "essoufflement",
       "difficulté à respirer": "essoufflement", "dyspnée": "essoufflement",
       "souffle court": "essoufflement", "manque de souffle": "essoufflement",
       "одышка": "essoufflement", "тяжело дышать": "essoufflement", "shortness of breath": "essoufflement",
-      // céphalées
       "céphalées": "céphalées", "maux de tête": "céphalées", "céphalée": "céphalées",
       "mal à la tête": "céphalées", "migraine": "céphalées",
       "головная боль": "céphalées", "headache": "céphalées",
-      // nausées
       "nausées": "nausées", "nausée": "nausées", "envie de vomir": "nausées",
       "тошнота": "nausées", "nausea": "nausées",
-      // rhinorrhée
       "rhinorrhée": "rhinorrhée", "nez qui coule": "rhinorrhée",
       "écoulement nasal": "rhinorrhée", "nez bouché": "rhinorrhée",
-      // mal de gorge
       "mal de gorge": "mal de gorge", "gorge douloureuse": "mal de gorge",
       "douleur en avalant": "mal de gorge", "déglutition douloureuse": "mal de gorge",
-      // éternuements
       "éternuements": "éternuements", "éternuement": "éternuements",
-      // irritation de la gorge
       "irritation de la gorge": "irritation de la gorge",
       "gorge qui gratte": "irritation de la gorge", "irritation gorge": "irritation de la gorge",
-      // perte d'appétit
       "perte d'appétit": "perte d'appétit", "pas d'appétit": "perte d'appétit",
-      "anorexie": "perte d'appétit", "нет аппетита": "perte d'appétit", "loss of appetite": "perte d'appétit",
-      // frissons → fièvre (signe d'accompagnement fréquent)
+      "anorexie": "perte d'appétit", "нет аппетита": "perte d'appétit",
       "frissons": "fièvre", "озноб": "fièvre", "chills": "fièvre",
-      // douleur musculaire → fatigue (proxy)
       "douleur musculaire": "fatigue", "боль в мышцах": "fatigue", "muscle pain": "fatigue",
-      // vertiges → céphalées (proxy)
       "vertiges": "céphalées", "vertige": "céphalées", "головокружение": "céphalées", "dizziness": "céphalées",
-      // palpitations
-      "palpitations": "palpitations", "palpitations cardiaques": "palpitations",
-      "сердцебиение": "palpitations",
-      // vomissements → nausées
       "vomissements": "nausées", "рвота": "nausées", "vomiting": "nausées",
-      // diarrhée, douleur abdominale → nausées (proxy pour gastrite)
       "diarrhée": "nausées", "понос": "nausées", "diarrhea": "nausées",
       "douleur abdominale": "nausées", "mal au ventre": "nausées",
       "боль в животе": "nausées", "abdominal pain": "nausées",
@@ -764,14 +787,12 @@
     return aliases;
   })();
 
-  /* Keys sorted by length desc so "douleur à la poitrine" matches before "gorge" */
   const _DICT_KEYS = Object.keys(SYMPTOM_DICT).sort((a, b) => b.length - a.length);
 
-  /* ── Symptômes disponibles comme chips (canoniques du moteur) ── */
   const QUICK_SYMPTOMS = [
     "fièvre", "toux", "fatigue", "essoufflement", "douleur thoracique",
     "céphalées", "rhinorrhée", "mal de gorge", "nausées", "perte d'appétit",
-    "éternuements", "irritation de la gorge", "palpitations",
+    "éternuements", "irritation de la gorge",
   ];
 
   /* ── État ── */
@@ -788,7 +809,6 @@
     return found;
   }
 
-  /* ── Rendu des quick chips ── */
   function renderChips() {
     const box = document.getElementById('sym-chips');
     if (!box) return;
@@ -799,18 +819,12 @@
     }).join('');
   }
 
-  /* ── Toggle d'un chip ── */
   function toggleChip(name) {
-    if (currentSymptoms.has(name)) {
-      currentSymptoms.delete(name);
-    } else {
-      currentSymptoms.add(name);
-    }
-    renderTags();
-    renderChips();
+    if (currentSymptoms.has(name)) currentSymptoms.delete(name);
+    else currentSymptoms.add(name);
+    renderTags(); renderChips();
   }
 
-  /* ── Rendu des tags (symptômes détectés) ── */
   function renderTags() {
     const wrap = document.getElementById('tags-wrap');
     const tagsEl = document.getElementById('sym-tags');
@@ -824,12 +838,8 @@
     renderChips();
   }
 
-  function removeSymptom(name) {
-    currentSymptoms.delete(name);
-    renderTags();
-  }
+  function removeSymptom(name) { currentSymptoms.delete(name); renderTags(); }
 
-  /* ── Input handler (debounced) ── */
   function onTextInput() {
     document.querySelectorAll('.sc-card').forEach(c => c.classList.remove('on'));
     clearTimeout(_debounceTimer);
@@ -840,17 +850,20 @@
     }, 250);
   }
 
-  /* ── Analyse depuis les symptômes détectés ── */
+  /* ── Analyse ── */
   async function runFromSymptoms() {
     if (!currentSymptoms.size) {
-      // try to detect from current text before giving up
       const text = document.getElementById('unified-input').value.trim();
       if (!text) return;
       currentSymptoms = detectSymptoms(text);
       renderTags();
       if (!currentSymptoms.size) return;
     }
+
     const symptoms = [...currentSymptoms];
+    const onset    = document.getElementById('onset-select').value || null;
+    const duration = document.getElementById('duration-select').value || null;
+
     const btn = document.getElementById('go');
     btn.disabled = true;
     showSkeleton();
@@ -858,7 +871,7 @@
       const data = await fetch('/v1/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symptoms }),
+        body: JSON.stringify({ symptoms, onset, duration }),
       }).then(r => r.json());
       render(data, symptoms);
     } catch (_) {
@@ -868,16 +881,14 @@
     }
   }
 
-  /* ── Toggle cost detail ── */
   function toggleDetail() {
-    const btn = document.getElementById('detail-btn');
+    const btn  = document.getElementById('detail-btn');
     const body = document.getElementById('detail-body');
     if (!btn || !body) return;
     btn.classList.toggle('open');
     body.classList.toggle('show');
   }
 
-  /* ── Chargement des scénarios ── */
   async function loadChips() {
     try {
       const { scenarios } = await fetch('/v1/scenarios').then(r => r.json());
@@ -898,39 +909,54 @@
     } catch (_) {}
   }
 
-  /* ── Skeleton ── */
   function showSkeleton() {
     document.getElementById('out').innerHTML = `
       <div class="sk-grid">
-        <div class="sk-card">
-          <div class="sk-line w-30" style="margin-bottom:18px"></div>
-          <div class="sk-line w-90"></div>
-          <div class="sk-line w-70"></div>
-          <div class="sk-line w-50"></div>
-        </div>
-        <div class="sk-card">
-          <div class="sk-line w-30" style="margin-bottom:18px"></div>
-          <div class="sk-line w-90"></div>
-          <div class="sk-line w-70"></div>
-        </div>
+        <div class="sk-card"><div class="sk-line w-30" style="margin-bottom:18px"></div><div class="sk-line w-90"></div><div class="sk-line w-70"></div><div class="sk-line w-50"></div></div>
+        <div class="sk-card"><div class="sk-line w-30" style="margin-bottom:18px"></div><div class="sk-line w-90"></div><div class="sk-line w-70"></div></div>
       </div>
-      <div class="sk-card sk-block" style="margin-bottom:12px">
-        <div class="sk-line w-50" style="margin-bottom:24px"></div>
-        <div class="sk-line w-90"></div>
-        <div class="sk-line w-70"></div>
-      </div>`;
+      <div class="sk-card sk-block" style="margin-bottom:12px"><div class="sk-line w-50" style="margin-bottom:24px"></div><div class="sk-line w-90"></div><div class="sk-line w-70"></div></div>`;
   }
 
-  /* ── Rendu du résultat ── */
+  /* ── TCS level label ── */
+  function tcsLabel(level) {
+    const map = {
+      'fort':         'Diagnostic confirmé',
+      'besoin_tests': 'Tests nécessaires',
+      'incertain':    'Résultat incertain',
+    };
+    return map[level] || level;
+  }
+
+  /* ── Render ── */
   function render(d, symptoms) {
     const out = document.getElementById('out');
+
+    /* ── EMERGENCY (RFE) ── */
+    if (d.emergency_flag) {
+      out.innerHTML = `
+        <div class="emergency-banner">
+          <div class="emergency-icon">${ICO.alert}</div>
+          <div class="emergency-body">
+            <div class="emergency-title">⚠ Urgence médicale détectée</div>
+            <div class="emergency-text">${d.emergency_reason}</div>
+            <span class="emergency-call">${ICO.phone} Appelez le 15 (SAMU) ou le 112</span>
+          </div>
+        </div>
+        <div class="disclaimer-row">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r=".5"/></svg>
+          Cette application ne remplace pas les secours d'urgence. En cas de doute, appelez immédiatement.
+        </div>`;
+      out.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
+    }
 
     if (!d.diagnoses?.length) {
       out.innerHTML = `<div class="empty"><div class="empty-icon">${ICO.search}</div><div class="empty-text">Aucun résultat pour <strong>${symptoms.join(', ')}</strong>.<br>Essayez d'ajouter d'autres symptômes.</div></div>`;
       return;
     }
 
-    /* Confidence + urgency */
+    /* ── Confidence + urgency + TCS ── */
     const confColors = {
       'élevé':  'background:var(--green-pale);color:var(--green);border:1px solid var(--green-light)',
       'modéré': 'background:var(--amber-pale);color:var(--amber);border:1px solid var(--amber-light)',
@@ -939,23 +965,44 @@
     const urgColors = {
       'faible': 'background:var(--green-pale);color:var(--green);border:1px solid var(--green-light)',
       'modéré': 'background:var(--amber-pale);color:var(--amber);border:1px solid var(--amber-light)',
-      'élevé':  'background:#fef2f2;color:#dc2626;border:1px solid #fecaca',
+      'élevé':  'background:var(--red-pale);color:var(--red);border:1px solid var(--red-light)',
     };
+    const tcsClass = { 'fort': 'tcs-fort', 'besoin_tests': 'tcs-besoin_tests', 'incertain': 'tcs-incertain' };
+
     const confBadge = `
       <div style="display:flex;flex-direction:column;gap:3px">
-        <span style="display:inline-flex;align-items:center;gap:5px;font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:3px 10px;border-radius:99px;${confColors[d.confidence_level]||confColors['modéré']}">${ICO.check} Niveau de confiance : ${d.confidence_level}</span>
-        <span style="font-size:.67rem;color:var(--muted-2);padding-left:4px">Fiabilité du résultat basée sur la cohérence des symptômes fournis</span>
+        <span style="display:inline-flex;align-items:center;gap:5px;font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:3px 10px;border-radius:99px;${confColors[d.confidence_level]||confColors['modéré']}">${ICO.check} Confiance : ${d.confidence_level}</span>
+        <span style="font-size:.67rem;color:var(--muted-2);padding-left:4px">Fiabilité basée sur la cohérence des symptômes</span>
       </div>`;
     const urgBadge = `
       <div style="display:flex;flex-direction:column;gap:3px">
         <span style="display:inline-flex;align-items:center;gap:5px;font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:3px 10px;border-radius:99px;${urgColors[d.urgency_level]||urgColors['faible']}">Urgence : ${d.urgency_level}</span>
-        <span style="font-size:.67rem;color:var(--muted-2);padding-left:4px">En cas de doute ou d'aggravation → consulter un médecin</span>
+        <span style="font-size:.67rem;color:var(--muted-2);padding-left:4px">En cas d'aggravation → consulter un médecin</span>
+      </div>`;
+    const tcsBadge = `
+      <div style="display:flex;flex-direction:column;gap:3px">
+        <span class="tcs-badge ${tcsClass[d.tcs_level]||'tcs-incertain'}">
+          ${d.tcs_level === 'fort' ? ICO.check : ''}
+          ${tcsLabel(d.tcs_level)}
+        </span>
+        <span style="font-size:.67rem;color:var(--muted-2);padding-left:4px">Décision clinique recommandée</span>
       </div>`;
 
-    /* Diagnoses */
+    /* ── SGL warnings ── */
+    const sglHtml = d.sgl_warnings?.length
+      ? `<div class="sgl-warnings">
+          <div class="sgl-warnings-title">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><circle cx="12" cy="17" r=".5"/></svg>
+            Points d'attention
+          </div>
+          ${d.sgl_warnings.map(w => `<div class="sgl-warning-item"><span class="sgl-dot"></span><span>${w}</span></div>`).join('')}
+        </div>`
+      : '';
+
+    /* ── Diagnoses ── */
     const diagHtml = d.diagnoses.map((x, i) => {
       const pct = Math.round(x.probability * 100);
-      const hi = i === 0;
+      const hi  = i === 0;
       return `<div class="d-row">
         <div class="d-rank ${hi?'hi':'lo'}">${i+1}</div>
         <span class="d-name ${hi?'hi':''}">${x.name}</span>
@@ -964,7 +1011,6 @@
       </div>`;
     }).join('');
 
-    /* Pourquoi ce diagnostic */
     const topDiag = d.diagnoses[0];
     const whyHtml = topDiag?.key_symptoms?.length
       ? `<div class="why-diag">
@@ -973,13 +1019,13 @@
         </div>`
       : '';
 
-    /* Tests */
+    /* ── Tests ── */
     const reqBadges = d.tests.required.map(t => `<span class="badge req">${t}</span>`).join('');
     const optBadges = d.tests.optional.length
       ? d.tests.optional.map(t => `<span class="badge opt">${t}</span>`).join('')
       : `<span class="no-tests">—</span>`;
 
-    /* Cost — valeurs exactes par scénario (pas de fourchette) */
+    /* ── Cost ── */
     const std  = d.comparison.standard_cost;
     const opt  = d.comparison.optimized_cost;
     const save = d.comparison.savings;
@@ -989,10 +1035,12 @@
     out.innerHTML = `
       <div class="section-divider">Résultat de l'analyse</div>
 
+      ${sglHtml}
+
       <div class="grid-2">
         <div class="card">
           <div class="card-title">Diagnostics probables</div>
-          <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">${confBadge}${urgBadge}</div>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">${confBadge}${urgBadge}${tcsBadge}</div>
           ${diagHtml}
           ${whyHtml}
         </div>
@@ -1030,10 +1078,7 @@
       <div class="cost-card">
         <div class="cost-head">
           <span class="cost-head-title">Impact économique du parcours diagnostique</span>
-          <span class="cost-head-pill">
-            ${ICO.trend}
-            Économie estimée
-          </span>
+          <span class="cost-head-pill">${ICO.trend} Économie estimée</span>
         </div>
         <div class="cost-cols">
           <div class="cost-col before">
@@ -1049,14 +1094,8 @@
           </div>
         </div>
         <div class="cost-savings">
-          <div class="cs-left">
-            ${ICO.trend}
-            <span class="cs-label">Économie estimée</span>
-          </div>
-          <div class="cs-right">
-            <span class="cs-val">${save} €</span>
-            <span class="cs-mult">${mult}</span>
-          </div>
+          <div class="cs-left">${ICO.trend}<span class="cs-label">Économie estimée</span></div>
+          <div class="cs-right"><span class="cs-val">${save} €</span><span class="cs-mult">${mult}</span></div>
         </div>
         <button class="detail-toggle" id="detail-btn" onclick="toggleDetail()">
           Voir le détail des analyses
@@ -1077,10 +1116,7 @@
             return `<div class="detail-row"><span>${t}${probTag}</span><span>${price} €</span></div>`;
           }).join('')}
         </div>
-        <div class="cost-note">
-          Simulation économique basée sur un parcours diagnostique standard observé en France.<br>
-          Consultation médecin généraliste : tarif Assurance Maladie. Autres actes : valeurs configurables France pour MVP.
-        </div>
+        <div class="cost-note">${cost_note}</div>
       </div>
 
       <div class="value-note">
@@ -1094,11 +1130,11 @@
 
       <div class="trust-row" style="margin-bottom:32px">
         <div class="trust-item">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
           Approche indicative basée sur des scénarios standards
         </div>
         <div class="trust-item trust-accent">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
           Jusqu'à 3–4x moins de coûts inutiles
         </div>
       </div>
@@ -1126,7 +1162,7 @@
 
       <div class="rgpd-notice">
         <svg class="rgpd-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        <div class="rgpd-text"><strong>Données &amp; confidentialité</strong> — Aucune donnée personnelle n'est stockée dans cette version MVP. Analyse instantanée et anonyme. Les extensions d'apprentissage utilisent uniquement des données anonymisées et agrégées.</div>
+        <div class="rgpd-text"><strong>Données &amp; confidentialité</strong> — Aucune donnée personnelle n'est stockée dans cette version MVP. Analyse instantanée et anonyme.</div>
       </div>
 
       <div class="disclaimer-row">
