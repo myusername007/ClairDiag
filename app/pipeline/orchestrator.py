@@ -159,7 +159,8 @@ def run(request: AnalyzeRequest) -> AnalyzeResponse:
         return resp
 
     # ── Étape 4 : BPU ─────────────────────────────────────────────────────────
-    probs = bpu.run(symptoms_compressed)
+    probs, incoherence_score = bpu.run(symptoms_compressed)
+    logger.debug(f"BPU → probs={len(probs)}, incoherence={incoherence_score:.3f}")
     logger.debug(f"BPU → {probs}")
 
     if not probs:
@@ -181,8 +182,12 @@ def run(request: AnalyzeRequest) -> AnalyzeResponse:
     logger.debug(f"CRE → {probs}")
 
     # ── Étape 8 : TCS ─────────────────────────────────────────────────────────
-    tcs_level, confidence_level = tcs.run(probs, len(symptoms_compressed))
-    logger.debug(f"TCS → tcs={tcs_level}, confidence={confidence_level}")
+    tcs_level, confidence_level, confidence_score = tcs.run(
+        probs, len(symptoms_compressed),
+        symptoms=symptoms_compressed,
+        incoherence_score=incoherence_score,
+    )
+    logger.debug(f"TCS → tcs={tcs_level}, confidence={confidence_level}, score={confidence_score}")
 
     # Construction de la liste diagnostics finale
     symptom_set = set(symptoms_compressed)
@@ -203,6 +208,7 @@ def run(request: AnalyzeRequest) -> AnalyzeResponse:
         probs=probs,
         symptom_count=len(symptoms_compressed),
         confidence_level=confidence_level,
+        incoherence_score=incoherence_score,
     )
     logger.debug(f"SGL → confidence={confidence_final}, warnings={sgl_warnings}")
 
