@@ -151,5 +151,38 @@ class AnalyzeResponse(BaseModel):
     test_costs: dict = {}
     consultation_cost: int = 30
 
+    # Session ID pour le re-evaluation loop (étape 5)
+    session_id: Optional[str] = None
+
     # Debug trace — None si debug=False
     debug_trace: Optional[DebugTrace] = None
+
+
+# ── Exam Re-evaluation Loop (Sprint 3, étape 5) ───────────────────────────────
+
+class RevaluateRequest(BaseModel):
+    session_id: str
+    exam_results: Dict[str, str]   # ex: {"CRP": "high", "radiographie": "infiltrat"}
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "session_id": "uuid-from-step1",
+                "exam_results": {
+                    "CRP": "high",
+                    "Radiographie pulmonaire": "infiltrat",
+                }
+            }
+        }
+    }
+
+
+class RevaluateResponse(BaseModel):
+    session_id: str
+    diagnoses_before: List[Diagnosis]   # résultats étape 1
+    diagnoses_after: List[Diagnosis]    # résultats après réévaluation
+    changes_log: List[str] = []         # ex: "CRP high → Pneumonie +0.36"
+    tcs_level: str = "incertain"
+    confidence_level: str = "modéré"
+    urgency_level: str = "faible"
+    sgl_warnings: List[str] = []
