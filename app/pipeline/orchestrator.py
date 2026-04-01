@@ -21,9 +21,14 @@ from app.data.symptoms import DIAG_ARTICLE, URGENT_DIAGNOSES
 from app.data.tests import TEST_EXPLANATIONS, CONSULTATION_COST
 from app.models.schemas import (
     AnalyzeRequest, AnalyzeResponse, Diagnosis, Tests, Cost, Comparison,
+    DebugTrace, DebugBPU, DebugCRE, DebugTCE, DebugTCS,
+    ValidationResponse, ValidationDiagnosis,
 )
 
 logger = logging.getLogger("clairdiag.pipeline")
+
+ENGINE_VERSION: str = "v2.1"
+RULES_VERSION: str = "v1.0"
 
 _MAX_PROB: float = 0.90
 PROBABILITY_THRESHOLD: float = 0.15
@@ -46,6 +51,11 @@ def _build_diagnosis_list(probs: dict[str, float], symptom_set: set[str]) -> lis
             if diag in key_symptoms_map and sym not in key_symptoms_map[diag]:
                 key_symptoms_map[diag].append(sym)
 
+    _CLINICAL_PRIORITY: dict[str, int] = {
+        "Pneumonie": 10, "Angor": 9, "Angine": 7,
+        "Grippe": 5, "Bronchite": 4, "Asthme": 3,
+    }
+
     diagnoses = sorted(
         [
             Diagnosis(
@@ -56,7 +66,7 @@ def _build_diagnosis_list(probs: dict[str, float], symptom_set: set[str]) -> lis
             for name, prob in probs.items()
             if prob >= PROBABILITY_THRESHOLD
         ],
-        key=lambda d: d.probability,
+        key=lambda d: (d.probability, _CLINICAL_PRIORITY.get(d.name, 0)),
         reverse=True,
     )[:3]
 
@@ -111,6 +121,98 @@ def _build_explanation(symptoms: list[str], diagnoses: list[Diagnosis], required
     return start + alt + tests_hint
 
 
+def _build_validation(
+    diagnoses: list,
+    probs: dict[str, float],
+    symptom_set: set[str],
+    tests,
+    confidence_score: float,
+    incoherence_score: float,
+    symptoms_compressed: list[str],
+) -> "ValidationResponse":
+    """Construit la réponse de validation avec why/why_not/tests_reasoning."""
+    from app.data.symptoms import SYMPTOM_DIAGNOSES, COMBO_BONUSES, SYMPTOM_EXCLUSIONS
+    from app.data.tests import TEST_CATALOG, DIAGNOSIS_TESTS
+    from app.pipeline.tcs import _LOW_DATA_THRESHOLD
+
+    val_diagnoses = []
+    ss = set(symptoms_compressed)
+
+    for diag in diagnoses[:3]:
+        name = diag.name
+        why = []
+        why_not = []
+
+        # WHY — симптоми що підтримують
+        supporting = [
+            s for s in ss
+            if name in SYMPTOM_DIAGNOSES.get(s, {})
+        ]
+        for s in supporting:
+            w = SYMPTOM_DIAGNOSES[s][name]
+            why.append(f"{s} (poids {w:.1f})")
+
+        # WHY — combo bonuses
+        for combo, bonuses in COMBO_BONUSES:
+            if combo.issubset(ss) and name in bonuses:
+                why.append(f"combo {'+'.join(sorted(combo))} → +{bonuses[name]:.2f}")
+
+        # WHY_NOT — penalties
+        for s in ss:
+            pen = SYMPTOM_EXCLUSIONS.get(s, {}).get(name, 0)
+            if pen > 0:
+                why_not.append(f"{s} → pénalité -{pen:.2f}")
+
+        # WHY_NOT — симптоми відсутні але типові для цього діагнозу
+        typical = set(SYMPTOM_DIAGNOSES.get(name, {}).keys()) - ss
+        if typical:
+            missing = sorted(typical)[:2]
+            why_not.append(f"absents: {', '.join(missing)}")
+
+        val_diagnoses.append(ValidationDiagnosis(
+            name=name,
+            probability=diag.probability,
+            why=why or ["aucun symptôme spécifique détecté"],
+            why_not=why_not or ["aucune contradiction"],
+        ))
+
+    # TESTS REASONING
+    tests_reasoning = []
+    top_name = diagnoses[0].name if diagnoses else ""
+    diag_tests = DIAGNOSIS_TESTS.get(top_name, {})
+    for t in tests.required[:3]:
+        info = TEST_CATALOG.get(t, {})
+        dv = info.get("diagnostic_value", {}).get(top_name, 0)
+        expl = info.get("explanation", "")
+        tests_reasoning.append(
+            f"{t} — valeur diagnostique {dv:.0%} pour {top_name}: {expl}"
+        )
+
+    # CONFIDENCE BREAKDOWN
+    _sp = sorted(probs.values(), reverse=True)
+    _top_diag = max(probs, key=probs.get) if probs else ""
+    _diag_syms = set(SYMPTOM_DIAGNOSES.get(_top_diag, {}).keys())
+    _cov = len(ss & _diag_syms) / len(ss) if ss else 0.0
+    _gap = (_sp[0] - _sp[1]) if len(_sp) >= 2 else 1.0
+    _coh = min(_gap / 0.30, 1.0)
+    _qual = min(len(symptoms_compressed) / 4.0, 1.0)
+
+    breakdown = {
+        "coverage": round(_cov, 3),
+        "coherence": round(_coh, 3),
+        "quality": round(_qual, 3),
+        "incoherence_penalty": round(incoherence_score * 0.08, 3),
+        "final_score": round(confidence_score, 3),
+        "low_data": len(symptoms_compressed) <= _LOW_DATA_THRESHOLD,
+    }
+
+    return ValidationResponse(
+        top3=val_diagnoses,
+        tests_reasoning=tests_reasoning,
+        confidence_breakdown=breakdown,
+    )
+
+
 def _empty_response(reason: str) -> AnalyzeResponse:
     empty_comparison = Comparison(
         standard_tests=[], standard_cost=0,
@@ -135,17 +237,24 @@ def run(request: AnalyzeRequest) -> AnalyzeResponse:
     """
     Exécute le pipeline CORE v2 complet dans l'ordre strict.
     """
+    _debug = request.debug
+    trace = DebugTrace(engine_version=ENGINE_VERSION, rules_version=RULES_VERSION) if _debug else None
 
     # ── Étape 1 : NSE ─────────────────────────────────────────────────────────
     symptoms_canonical = nse.run(request.symptoms)
     logger.debug(f"NSE → {symptoms_canonical}")
+    if _debug: trace.symptoms_after_parser = list(symptoms_canonical)
 
     # ── Étape 2 : SCM ─────────────────────────────────────────────────────────
     symptoms_compressed = scm.run(symptoms_canonical)
     logger.debug(f"SCM → {symptoms_compressed}")
+    if _debug: trace.symptoms_after_scm = list(symptoms_compressed)
 
     # ── Étape 3 : RFE ─────────────────────────────────────────────────────────
     rfe_result = rfe.run(symptoms_compressed)
+    if _debug:
+        trace.red_flags_detected = [rfe_result.reason] if rfe_result.emergency else []
+        trace.emergency = rfe_result.emergency
     if rfe_result.emergency:
         logger.warning(f"RFE EMERGENCY → {rfe_result.reason}")
         resp = _empty_response(
@@ -156,6 +265,7 @@ def run(request: AnalyzeRequest) -> AnalyzeResponse:
         resp.emergency_reason = rfe_result.reason
         resp.urgency_level = "élevé"
         resp.tcs_level = "incertain"
+        if _debug: resp.debug_trace = trace
         return resp
 
     # ── Étape 4 : BPU ─────────────────────────────────────────────────────────
@@ -163,31 +273,114 @@ def run(request: AnalyzeRequest) -> AnalyzeResponse:
     logger.debug(f"BPU → probs={len(probs)}, incoherence={incoherence_score:.3f}")
     logger.debug(f"BPU → {probs}")
 
+    if _debug:
+        # Reconstruire les détails BPU pour la trace
+        from app.data.symptoms import SYMPTOM_DIAGNOSES, COMBO_BONUSES, SYMPTOM_EXCLUSIONS
+        ss = set(symptoms_compressed)
+        _combos = [
+            f"{'+'.join(sorted(combo))} → {diag} +{bonus}"
+            for combo, bonuses in COMBO_BONUSES
+            for diag, bonus in bonuses.items()
+            if combo.issubset(ss) and diag in probs
+        ]
+        _penalties = [
+            f"{sym} → {diag} -{penalty}"
+            for sym in ss
+            for diag, penalty in SYMPTOM_EXCLUSIONS.get(sym, {}).items()
+            if diag in probs
+        ]
+        trace.bpu = DebugBPU(
+            combo_bonuses_applied=_combos,
+            penalties_applied=_penalties,
+            incoherence_score=round(incoherence_score, 3),
+            final_probs={k: round(v, 3) for k, v in sorted(probs.items(), key=lambda x: -x[1])},
+        )
+
     if not probs:
-        return _empty_response(
+        resp = _empty_response(
             "Les symptômes indiqués ne permettent pas d'identifier un diagnostic. "
             "Veuillez consulter un médecin."
         )
+        if _debug: resp.debug_trace = trace
+        return resp
 
     # ── Étape 5 : RME ─────────────────────────────────────────────────────────
     urgency_level = rme.run(probs)
     logger.debug(f"RME → urgency={urgency_level}")
 
     # ── Étape 6 : TCE ─────────────────────────────────────────────────────────
+    probs_before_tce = dict(probs)
     probs = tce.run(probs, onset=request.onset, duration=request.duration)
     logger.debug(f"TCE → {probs}")
+    if _debug:
+        _tce_boosts, _tce_pens = [], []
+        for d, v_after in probs.items():
+            v_before = probs_before_tce.get(d, 0)
+            diff = round(v_after - v_before, 3)
+            if diff > 0:   _tce_boosts.append(f"{d} +{diff}")
+            elif diff < 0: _tce_pens.append(f"{d} {diff}")
+        trace.tce = DebugTCE(
+            onset=request.onset,
+            duration=request.duration,
+            boosts_applied=_tce_boosts,
+            penalties_applied=_tce_pens,
+            probs_before={k: round(v, 3) for k, v in sorted(probs_before_tce.items(), key=lambda x: -x[1])},
+            probs_after={k: round(v, 3) for k, v in sorted(probs.items(), key=lambda x: -x[1])},
+        )
 
     # ── Étape 7 : CRE ─────────────────────────────────────────────────────────
+    probs_before_cre = dict(probs)
     probs = cre.run(probs, symptoms_compressed)
     logger.debug(f"CRE → {probs}")
+    if _debug:
+        from app.pipeline.cre import _RULES
+        ss = set(symptoms_compressed)
+        _rules_applied = [
+            f"{'+'.join(sorted(req))}{'(excl:'+','.join(sorted(excl))+')' if excl else ''} → {diag} {delta:+.2f}"
+            for req, excl, diag, delta in _RULES
+            if diag in probs_before_cre
+            and req.issubset(ss)
+            and not excl.intersection(ss)
+        ]
+        trace.cre = DebugCRE(
+            rules_applied=_rules_applied,
+            probs_before={k: round(v, 3) for k, v in sorted(probs_before_cre.items(), key=lambda x: -x[1])},
+            probs_after={k: round(v, 3) for k, v in sorted(probs.items(), key=lambda x: -x[1])},
+        )
 
     # ── Étape 8 : TCS ─────────────────────────────────────────────────────────
+    probs_before_tcs = dict(probs)
     tcs_level, confidence_level, confidence_score = tcs.run(
         probs, len(symptoms_compressed),
         symptoms=symptoms_compressed,
         incoherence_score=incoherence_score,
     )
     logger.debug(f"TCS → tcs={tcs_level}, confidence={confidence_level}, score={confidence_score}")
+    if _debug:
+        from app.pipeline.tcs import _compute_confidence, _LOW_DATA_THRESHOLD
+        from app.data.symptoms import SYMPTOM_DIAGNOSES as _SD
+        _syms = symptoms_compressed
+        _sp = sorted(probs_before_tcs.values(), reverse=True)
+        _top_diag = max(probs_before_tcs, key=probs_before_tcs.get) if probs_before_tcs else ""
+        _diag_syms = set(_SD.get(_top_diag, {}).keys())
+        _ss = set(_syms)
+        _cov = len(_ss & _diag_syms) / len(_ss) if _ss else 0.0
+        _gap = (_sp[0] - _sp[1]) if len(_sp) >= 2 else 1.0
+        _coh = min(_gap / 0.30, 1.0)
+        _qual = min(len(_syms) / 4.0, 1.0)
+        _raw = 0.40 * _cov + 0.35 * _coh + 0.25 * _qual
+        _pen = incoherence_score * 0.08
+        trace.tcs = DebugTCS(
+            coverage=round(_cov, 3),
+            coherence=round(_coh, 3),
+            quality=round(_qual, 3),
+            raw_score=round(_raw, 3),
+            incoherence_penalty=round(_pen, 3),
+            final_score=round(confidence_score, 3),
+            low_data_cap_applied=(len(_syms) <= _LOW_DATA_THRESHOLD),
+            confidence_level=confidence_level,
+            tcs_level=tcs_level,
+        )
 
     # Construction de la liste diagnostics finale
     symptom_set = set(symptoms_compressed)
@@ -211,8 +404,25 @@ def run(request: AnalyzeRequest) -> AnalyzeResponse:
         incoherence_score=incoherence_score,
     )
     logger.debug(f"SGL → confidence={confidence_final}, warnings={sgl_warnings}")
+    if _debug:
+        trace.selected_tests = list(tests.required) + list(tests.optional)
+        trace.sgl_warnings = list(sgl_warnings)
+        trace.confidence_final = confidence_final
 
     explanation = _build_explanation(symptoms_compressed, diagnoses, tests.required)
+
+    # Validation mode
+    validation = None
+    if request.validation_mode:
+        validation = _build_validation(
+            diagnoses=diagnoses,
+            probs=probs,
+            symptom_set=symptom_set,
+            tests=tests,
+            confidence_score=confidence_score,
+            incoherence_score=incoherence_score,
+            symptoms_compressed=symptoms_compressed,
+        )
 
     return AnalyzeResponse(
         diagnoses=diagnoses,
@@ -230,4 +440,6 @@ def run(request: AnalyzeRequest) -> AnalyzeResponse:
         test_probabilities=test_probabilities,
         test_costs=test_costs,
         consultation_cost=CONSULTATION_COST,
+        debug_trace=trace,
+        validation=validation,
     )
