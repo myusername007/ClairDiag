@@ -26,6 +26,9 @@ from app.models.schemas import (
 
 logger = logging.getLogger("clairdiag.pipeline")
 
+ENGINE_VERSION: str = "v2.1"
+RULES_VERSION: str = "v1.0"
+
 _MAX_PROB: float = 0.90
 PROBABILITY_THRESHOLD: float = 0.15
 
@@ -47,6 +50,11 @@ def _build_diagnosis_list(probs: dict[str, float], symptom_set: set[str]) -> lis
             if diag in key_symptoms_map and sym not in key_symptoms_map[diag]:
                 key_symptoms_map[diag].append(sym)
 
+    _CLINICAL_PRIORITY: dict[str, int] = {
+        "Pneumonie": 10, "Angor": 9, "Angine": 7,
+        "Grippe": 5, "Bronchite": 4, "Asthme": 3,
+    }
+
     diagnoses = sorted(
         [
             Diagnosis(
@@ -57,7 +65,7 @@ def _build_diagnosis_list(probs: dict[str, float], symptom_set: set[str]) -> lis
             for name, prob in probs.items()
             if prob >= PROBABILITY_THRESHOLD
         ],
-        key=lambda d: d.probability,
+        key=lambda d: (d.probability, _CLINICAL_PRIORITY.get(d.name, 0)),
         reverse=True,
     )[:3]
 
@@ -137,7 +145,7 @@ def run(request: AnalyzeRequest) -> AnalyzeResponse:
     Exécute le pipeline CORE v2 complet dans l'ordre strict.
     """
     _debug = request.debug
-    trace = DebugTrace() if _debug else None
+    trace = DebugTrace(engine_version=ENGINE_VERSION, rules_version=RULES_VERSION) if _debug else None
 
     # ── Étape 1 : NSE ─────────────────────────────────────────────────────────
     symptoms_canonical = nse.run(request.symptoms)

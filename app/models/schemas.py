@@ -94,6 +94,10 @@ class DebugTCS(BaseModel):
 
 class DebugTrace(BaseModel):
     """Trace complète du pipeline — activée par debug=True."""
+    # Versions
+    engine_version: str = "v2.1"
+    rules_version: str = "v1.0"
+
     # Étape 1+2 : NSE + SCM
     symptoms_after_parser: List[str] = []
     symptoms_after_scm: List[str] = []
