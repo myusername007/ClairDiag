@@ -15,6 +15,11 @@ SYMPTOM_DIAGNOSES: dict[str, dict[str, float]] = {
     "nausées":               {"Gastrite": 0.8, "Grippe": 0.3},
     "éternuements":          {"Allergie": 0.8, "Rhinopharyngite": 0.4},
     "irritation de la gorge":{"Allergie": 0.7},
+    # ── Nouveaux symptômes — v2.2 ──────────────────────────────────────────
+    "sifflement":            {"Asthme": 0.85, "Bronchite": 0.30},
+    "palpitations":          {"Angor": 0.55, "Hypertension": 0.40},
+    "courbatures":           {"Grippe": 0.80, "Rhinopharyngite": 0.30},
+    "œdèmes":               {"Angor": 0.50},
     # ── Red flag symptoms (RFE) ────────────────────────────────────────────
     "cyanose":               {"Pneumonie": 0.9, "Angor": 0.8},
     "syncope":               {"Angor": 0.9, "Hypertension": 0.5},
@@ -44,6 +49,7 @@ ALIASES: dict[str, str] = {
     "essoufflé":                 "essoufflement",
     "souffle court":             "essoufflement",
     "manque de souffle":         "essoufflement",
+    "gêne respiratoire":         "essoufflement",
     "douleur au thorax":         "douleur thoracique",
     "douleur à la poitrine":     "douleur thoracique",
     "mal à la poitrine":         "douleur thoracique",
@@ -57,13 +63,26 @@ ALIASES: dict[str, str] = {
     "éternuement":               "éternuements",
     "gorge qui gratte":          "irritation de la gorge",
     "irritation gorge":          "irritation de la gorge",
-    # red flags
+    # ── Nouveaux alias — v2.2 ─────────────────────────────────────────────
+    "sifflements":               "sifflement",
+    "respiration sifflante":     "sifflement",
+    "palpitation":               "palpitations",
+    "cœur qui bat vite":         "palpitations",
+    "battements rapides":        "palpitations",
+    "courbature":                "courbatures",
+    "douleurs musculaires":      "courbatures",
+    "jambes gonflées":           "œdèmes",
+    "chevilles gonflées":        "œdèmes",
+    "pieds gonflés":             "œdèmes",
+    "malaise":                   "fatigue",
+    # ── Red flags ─────────────────────────────────────────────────────────
     "bleu":                      "cyanose",
     "lèvres bleues":             "cyanose",
     "perte de connaissance":     "syncope",
     "évanouissement":            "syncope",
     "sang dans les crachats":    "hémoptysie",
     "crachats sanglants":        "hémoptysie",
+    "crachat de sang":           "hémoptysie",
     "douleur intense poitrine":  "douleur thoracique intense",
     "paralysé":                  "paralysie",
     "bras paralysé":             "paralysie",
@@ -79,6 +98,11 @@ COMBO_BONUSES: list[tuple[frozenset[str], dict[str, float]]] = [
     (frozenset({"fièvre", "céphalées", "fatigue"}),                          {"Grippe": 0.20}),
     (frozenset({"nausées", "perte d'appétit"}),                              {"Gastrite": 0.20}),
     (frozenset({"fatigue", "perte d'appétit"}),                              {"Anémie": 0.15}),
+    # ── Nouveaux combos — v2.2 ────────────────────────────────────────────
+    (frozenset({"sifflement", "essoufflement"}),                             {"Asthme": 0.30}),
+    (frozenset({"sifflement", "toux"}),                                      {"Asthme": 0.20}),
+    (frozenset({"fièvre", "courbatures", "fatigue"}),                        {"Grippe": 0.25}),
+    (frozenset({"œdèmes", "essoufflement"}),                                {"Angor": 0.20}),
 ]
 
 # Symptômes incompatibles → pénalités
