@@ -24,6 +24,9 @@ from app.models.schemas import Tests, Cost, Comparison
 
 _MAX_REQUIRED_TESTS: int = 3
 
+# Diagnostics viraux simples — réduire l'agressivité des tests
+_VIRAL_SIMPLE: set[str] = {"Grippe", "Rhinopharyngite", "Bronchite", "Allergie"}
+
 
 def _test_score(test: str, top_diagnoses: list[str]) -> float:
     """
@@ -70,12 +73,20 @@ def run(
     # ── Sélection LME : top 3 required par score valeur/coût ─────────────────
     top_diag_names = diagnoses_names[:3]  # on limite aux top 3 diagnostics
 
+    # ── Réduction agressivité pour diagnostics viraux simples ────────────────
+    top_diag = diagnoses_names[0] if diagnoses_names else ""
+    is_viral_simple = (
+        top_diag in _VIRAL_SIMPLE
+        and not any(d not in _VIRAL_SIMPLE for d in diagnoses_names[:2])
+    )
+    max_required = 2 if is_viral_simple else _MAX_REQUIRED_TESTS
+
     scored_required = sorted(
         required_candidates,
         key=lambda t: _test_score(t, top_diag_names),
         reverse=True,
     )
-    selected_required: list[str] = scored_required[:_MAX_REQUIRED_TESTS]
+    selected_required: list[str] = scored_required[:max_required]
 
     # Les required candidats non sélectionnés passent en optional
     demoted = set(scored_required[_MAX_REQUIRED_TESTS:])
