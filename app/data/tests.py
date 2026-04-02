@@ -199,8 +199,8 @@ CONDITIONAL_REQUIRED: dict[str, list[str]] = {
     "PCR grippe":                 ["fièvre", "toux"],
     "Tests allergologiques":      ["éternuements", "irritation de la gorge"],
     "IgE totales":                ["éternuements", "irritation de la gorge"],
-    "D-dimères":                 ["essoufflement", "douleur thoracique"],
-    "BNP":                       ["essoufflement", "œdèmes"],
+    "D-dimères":                 ["douleur thoracique"],  # тільки при дулі thoracique
+    "BNP":                       ["œdèmes"],  # тільки при œdèmes
     "TSH":                       ["palpitations"],
     "pH-métrie":                 ["reflux acide", "brûlure rétrosternale"],
     "Coloscopie":                ["ballonnements", "douleur chronique"],

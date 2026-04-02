@@ -52,6 +52,9 @@ _RULES: list[tuple[set[str], set[str], str, float]] = [
     ({"mal de gorge"},  {"fièvre"}, "Angine",      -0.08),
     ({"mal de gorge"},  {"fièvre"}, "Rhinopharyngite", +0.06),
 
+    # Fièvre + toux → Grippe plus probable que Bronchite
+    ({"fièvre", "toux"}, {"essoufflement"}, "Grippe", +0.08),
+    ({"fièvre", "toux"}, {"essoufflement"}, "Bronchite", -0.05),
     # Fièvre + essoufflement → Pneumonie plus probable que Bronchite
     ({"fièvre", "essoufflement"}, set(), "Pneumonie", +0.12),
     # Fièvre → Angor moins probable (fièvre pas typique pour cardique)

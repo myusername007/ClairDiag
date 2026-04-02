@@ -105,14 +105,19 @@ def run(
         return "incertain", "faible", 0.0
 
     top_prob = max(probs.values())
+    top_diag = max(probs, key=probs.get)
 
     # TCS level
+    _ALWAYS_NEEDS_TESTS: set[str] = {"Insuffisance cardiaque", "Embolie pulmonaire", "Trouble du rythme"}
     if top_prob >= 0.90:
         tcs_level = "fort"
     elif top_prob >= 0.75:
         tcs_level = "besoin_tests"
     else:
         tcs_level = "incertain"
+    # Certains diagnostics nécessitent toujours des tests
+    if tcs_level == "fort" and max(probs, key=probs.get) in _ALWAYS_NEEDS_TESTS:
+        tcs_level = "besoin_tests"
 
     # Threshold Guard — fort дозволений тільки при всіх умовах
     # 1. symptom_count > 2
