@@ -111,11 +111,15 @@ def run(
         "Embolie pulmonaire":    ["D-dimères"],
         "Insuffisance cardiaque": ["BNP", "ECG"],
         "Trouble du rythme":     ["ECG"],
+        "RGO":                   ["pH-métrie"],
+        "SII":                   ["NFS", "CRP"],
     }
     _HARD_OPTIONAL: dict[str, list[str]] = {
         "Embolie pulmonaire":    ["Scanner thoracique", "ECG", "Troponine"],
         "Insuffisance cardiaque": ["Échocardiographie", "Radiographie pulmonaire"],
         "Trouble du rythme":     ["Holter ECG", "TSH"],
+        "RGO":                   ["Test Helicobacter pylori", "Fibroscopie gastrique"],
+        "SII":                   ["Coloscopie"],
     }
 
     if top1_diag in _HARD_REQUIRED:

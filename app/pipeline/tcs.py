@@ -108,7 +108,7 @@ def run(
     top_diag = max(probs, key=probs.get)
 
     # TCS level
-    _ALWAYS_NEEDS_TESTS: set[str] = {"Insuffisance cardiaque", "Embolie pulmonaire", "Trouble du rythme"}
+    _ALWAYS_NEEDS_TESTS: set[str] = {"Insuffisance cardiaque", "Embolie pulmonaire", "Trouble du rythme", "RGO", "SII"}
     if top_prob >= 0.90:
         tcs_level = "fort"
     elif top_prob >= 0.75:
