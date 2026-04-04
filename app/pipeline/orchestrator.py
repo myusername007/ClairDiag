@@ -334,12 +334,10 @@ def _build_differential(
     sorted_p = sorted(probs.values(), reverse=True)
     gap = round(sorted_p[0] - sorted_p[1], 2) if len(sorted_p) >= 2 else 1.0
 
-    if gap >= 0.25:
-        gap_note = f"Hypothèse principale nettement dominante (écart {gap:.0%})."
-    elif gap >= 0.10:
-        gap_note = f"Deux hypothèses proches (écart {gap:.0%}) — examens nécessaires pour trancher."
+    if gap >= 0.10:
+        gap_note = "Diagnostic principal probable."
     else:
-        gap_note = f"Profil ambiguë (écart {gap:.0%}) — diagnostic incertain sans bilan."
+        gap_note = "Profil proche — confirmation nécessaire."
 
     ss = set(symptoms_compressed)
     top1_syms = {s for s, d in SYMPTOM_DIAGNOSES.items() if top.name in d}
@@ -736,12 +734,19 @@ def run(request: AnalyzeRequest) -> AnalyzeResponse:
 
     # Cost Engine — economic layer
     top_diag_name = diagnoses_names[0] if diagnoses_names else ""
-    cost_data = compute_savings(
+    _cost_data = compute_savings(
         top_diag=top_diag_name,
         urgency=urgency_level,
         tcs=tcs_level,
         selected_tests=tests.required,
     )
+    economics = {
+        "standard_cost": _cost_data["standard_cost"],
+        "optimized_cost": _cost_data["optimized_cost"],
+        "savings": _cost_data["savings"],
+        "currency": "EUR",
+        "pricing_basis": "France baseline v1",
+    }
 
     confidence_final, sgl_warnings = sgl.run(
         diagnoses_names=diagnoses_names,
@@ -810,9 +815,7 @@ def run(request: AnalyzeRequest) -> AnalyzeResponse:
         diagnoses=diagnoses,
         tests=tests,
         cost=cost,
-        standard_cost=cost_data["standard_cost"],
-        optimized_cost=cost_data["optimized_cost"],
-        savings_amount=cost_data["savings"],
+        economics=economics,
         explanation=explanation,
         comparison=comparison,
         confidence_level=confidence_final,

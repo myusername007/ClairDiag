@@ -187,7 +187,7 @@ def revaluate(request: RevaluateRequest) -> RevaluateResponse:
     # Human-readable summaries
     changes_summary = _build_changes_summary(diagnoses_before, diagnoses_after, changes_log)
     reasoning_summary = _build_reasoning_summary(
-        tests_impact, decision_before, decision_after
+        tests_impact, decision_before, decision_after, diagnoses_after
     )
 
     session_store.delete(request.session_id)
@@ -329,9 +329,21 @@ def _build_tests_impact(
     probs_after: dict,
     exam_results: dict,
 ) -> list[TestImpact]:
-    """Structured per-test impact."""
+    """
+    ТЗ пріоритет: Top1 → Top2 → do_not_miss.
+    Показувати тільки реальні зміни (delta != 0).
+    """
     from app.pipeline.erl import _find_test
     from app.data.tests import TEST_CATALOG
+
+    _POSITIVE_VALUES = {
+        "high", "positive", "present", "élevé", "positif",
+        "infiltrat", "anormal", "pathologique", "elevated",
+        "augmenté", "augmentée", "présent", "présente",
+    }
+
+    # Визначаємо пріоритет діагнозів
+    top_diags = [d for d, _ in sorted(probs_after.items(), key=lambda x: -x[1])[:2]]
 
     impacts = []
     for test_name, raw_value in exam_results.items():
@@ -340,15 +352,18 @@ def _build_tests_impact(
             continue
         dv = TEST_CATALOG[catalog_key].get("diagnostic_value", {})
         value = raw_value.strip().lower()
-        is_positive = value in {
-            "high", "positive", "present", "élevé", "positif",
-            "infiltrat", "anormal", "pathologique", "elevated",
-            "augmenté", "augmentée", "présent", "présente",
-        }
+        is_positive = value in _POSITIVE_VALUES
         direction = "boost" if is_positive else "suppress"
 
-        # Top impacted diagnosis = highest dv in common
-        for diag, diag_val in sorted(dv.items(), key=lambda x: -x[1]):
+        # Сортуємо по пріоритету: top1 > top2 > інші
+        def diag_priority(d):
+            if d == top_diags[0] if top_diags else "":
+                return 0
+            if len(top_diags) > 1 and d == top_diags[1]:
+                return 1
+            return 2
+
+        for diag, diag_val in sorted(dv.items(), key=lambda x: (diag_priority(x[0]), -x[1])):
             if diag not in probs_before:
                 continue
             delta = round(probs_after.get(diag, 0) - probs_before.get(diag, 0), 3)
@@ -375,46 +390,64 @@ def _build_changes_summary(
     after: list[Diagnosis],
     changes_log: list[str],
 ) -> str:
-    if not before or not after:
+    """
+    ТЗ: порівнювати before vs after, писати тільки реальні зміни.
+    inchangé / renforcé / affaibli per diagnosis.
+    """
+    if not after:
         return "Aucun changement significatif détecté."
 
-    top_before = before[0].name if before else "?"
-    top_after = after[0].name if after else "?"
+    before_map = {d.name: d.probability for d in before}
+    after_map  = {d.name: d.probability for d in after}
 
-    if top_before != top_after:
-        return (
-            f"Le diagnostic principal a changé : {top_before} → {top_after}. "
-            f"{len(changes_log)} modification(s) appliquée(s)."
-        )
-    else:
-        prob_before = before[0].probability
-        prob_after = after[0].probability
-        delta = round(prob_after - prob_before, 2)
-        direction = "renforcé" if delta > 0 else "affaibli"
-        return (
-            f"Le diagnostic principal ({top_after}) a été {direction} "
-            f"({'+' if delta > 0 else ''}{int(delta * 100)}%). "
-            f"{len(changes_log)} modification(s) appliquée(s)."
-        )
+    parts = []
+    for d in after[:3]:
+        p_after  = d.probability
+        p_before = before_map.get(d.name)
+        if p_before is None:
+            parts.append(f"{d.name} apparu ({p_after:.0%})")
+        else:
+            delta = round(p_after - p_before, 2)
+            if abs(delta) < 0.02:
+                parts.append(f"{d.name} inchangé")
+            elif delta > 0:
+                parts.append(f"{d.name} renforcé (+{int(delta*100)}%)")
+            else:
+                parts.append(f"{d.name} affaibli ({int(delta*100)}%)")
+
+    return ". ".join(parts) + "." if parts else "Aucun changement significatif."
 
 
 def _build_reasoning_summary(
     tests_impact: list[TestImpact],
     decision_before: str,
     decision_after: str,
+    diagnoses_after: list[Diagnosis] | None = None,
 ) -> str:
+    """
+    ТЗ: використовувати ТІЛЬКИ діагнози з diagnoses_after.
+    Не згадувати відсутні діагнози.
+    """
     if not tests_impact:
         return "Aucun examen n'a modifié significativement l'analyse."
 
-    boosts = [t for t in tests_impact if t.direction == "boost"]
-    suppresses = [t for t in tests_impact if t.direction == "suppress"]
+    after_names = {d.name for d in (diagnoses_after or [])}
+
+    # Фільтруємо тільки impacts для діагнозів що є в after
+    relevant = [t for t in tests_impact if not after_names or t.target_diagnosis in after_names]
+    if not relevant:
+        relevant = tests_impact  # fallback
+
+    boosts     = [t for t in relevant if t.direction == "boost"]
+    suppresses = [t for t in relevant if t.direction == "suppress"]
+
     parts = []
     if boosts:
         top = max(boosts, key=lambda x: abs(x.delta))
-        parts.append(f"{top.test} positif renforce {top.target_diagnosis}")
+        parts.append(f"{top.test} {top.result} renforce {top.target_diagnosis}")
     if suppresses:
         top = max(suppresses, key=lambda x: abs(x.delta))
-        parts.append(f"{top.test} négatif réduit {top.target_diagnosis}")
+        parts.append(f"{top.test} {top.result} réduit {top.target_diagnosis}")
 
     summary = ". ".join(parts) + "."
     if decision_before != decision_after:
