@@ -356,8 +356,11 @@ def _build_tests_impact(
         direction = "boost" if is_positive else "suppress"
 
         # Сортуємо по пріоритету: top1 > top2 > інші
+        # ВАЖЛИВО: тільки діагнози що є в probs_after (після рееvaluation)
+        after_diags = set(probs_after.keys())
+
         def diag_priority(d):
-            if d == top_diags[0] if top_diags else "":
+            if top_diags and d == top_diags[0]:
                 return 0
             if len(top_diags) > 1 and d == top_diags[1]:
                 return 1
@@ -365,6 +368,9 @@ def _build_tests_impact(
 
         for diag, diag_val in sorted(dv.items(), key=lambda x: (diag_priority(x[0]), -x[1])):
             if diag not in probs_before:
+                continue
+            # Правило 4: показувати тільки діагнози що є в after
+            if diag not in after_diags:
                 continue
             delta = round(probs_after.get(diag, 0) - probs_before.get(diag, 0), 3)
             if abs(delta) < 0.001:

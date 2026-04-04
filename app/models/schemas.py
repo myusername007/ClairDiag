@@ -53,20 +53,6 @@ class Tests(BaseModel):
     optional: List[str]
 
 
-class Cost(BaseModel):
-    required: int
-    optional: int
-    savings: int
-
-
-class Comparison(BaseModel):
-    standard_tests: List[str]
-    standard_cost: int
-    optimized_tests: List[str]
-    optimized_cost: int
-    savings: int
-    savings_multiplier: str
-    cost_note: str = ""
 
 
 # ── Debug Trace ───────────────────────────────────────────────────────────────
@@ -192,9 +178,7 @@ class AnalyzeResponse(BaseModel):
 
     diagnoses: List[Diagnosis]
     tests: Tests
-    cost: Cost
     explanation: str
-    comparison: Comparison
 
     # Levels
     confidence_level: str = "modéré"

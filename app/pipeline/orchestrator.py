@@ -9,7 +9,7 @@ from app.data.symptoms import DIAG_ARTICLE, URGENT_DIAGNOSES
 from app.data.tests import TEST_EXPLANATIONS, CONSULTATION_COST
 from app.pipeline.cost_engine import compute_savings
 from app.models.schemas import (
-    AnalyzeRequest, AnalyzeResponse, Diagnosis, Tests, Cost, Comparison,
+    AnalyzeRequest, AnalyzeResponse, Diagnosis, Tests,
     DebugTrace, DebugBPU, DebugCRE, DebugTCE, DebugTCS,
     ValidationResponse, ValidationDiagnosis,
 )
@@ -535,19 +535,13 @@ def _build_validation(
 
 
 def _empty_response(reason: str, urgency_level: str = "faible") -> AnalyzeResponse:
-    empty_comparison = Comparison(
-        standard_tests=[], standard_cost=0,
-        optimized_tests=[], optimized_cost=0,
-        savings=0, savings_multiplier="—",
-    )
     return AnalyzeResponse(
         diagnoses=[],
         tests=Tests(required=[], optional=[]),
-        cost=Cost(required=0, optional=0, savings=0),
         explanation=reason,
-        comparison=empty_comparison,
+        economics={},
         urgency_level=urgency_level,
-        tcs_level="incertain",  # backward compat — SF tests expect "incertain" for emergency/empty
+        tcs_level="incertain",
         decision="EMERGENCY" if urgency_level == "élevé" else "MEDICAL_REVIEW",
         consultation_cost=CONSULTATION_COST,
     )
@@ -726,11 +720,12 @@ def run(request: AnalyzeRequest) -> AnalyzeResponse:
     diagnoses_names = [d.name for d in diagnoses]
 
     # COUCHE 4 — OUTPUT
-    tests, cost, comparison, test_explanations, test_probabilities, test_costs = lme.run(
+    _lme = lme.run(
         diagnoses_names=diagnoses_names,
         symptom_set=symptom_set,
         probs=probs,
     )
+    tests, _cost_lme, _comparison_lme, test_explanations, test_probabilities, test_costs = _lme
 
     # Cost Engine — economic layer
     top_diag_name = diagnoses_names[0] if diagnoses_names else ""
@@ -814,10 +809,8 @@ def run(request: AnalyzeRequest) -> AnalyzeResponse:
     return AnalyzeResponse(
         diagnoses=diagnoses,
         tests=tests,
-        cost=cost,
         economics=economics,
         explanation=explanation,
-        comparison=comparison,
         confidence_level=confidence_final,
         urgency_level=urgency_level,
         emergency_flag=False,
