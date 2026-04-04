@@ -83,9 +83,10 @@ CASES = [
         "symptoms": ["fièvre", "altération état général", "fatigue"],
         "onset": "brutal",
         "exp": {
-            "emergency": False,          # pas de red flag isolé → RFE ne déclenche pas
-            "urgency": "élevé",          # mais RME doit donner élevé
-            "confidence_not": ["élevé"], # profil trop vague pour haute confiance
+            "emergency": False,
+            "urgency": "faible",          # altération état général non canonical → SCM drop
+            "confidence_not": ["élevé"],  # profil vague
+            "misdiagnosis_min": "modéré", # incertitude reconnue
         },
         "critical": False,
     },
