@@ -550,12 +550,50 @@ def _empty_response(reason: str) -> AnalyzeResponse:
 
 # ── Pipeline principal ────────────────────────────────────────────────────────
 
+# ── Pipeline principal ────────────────────────────────────────────────────────
+#
+# Architecture logique — 4 couches :
+#
+#  ┌─────────────────────────────────────────────────────────────────┐
+#  │  COUCHE 1 — PARSER LAYER                                        │
+#  │  NSE (étape 1) + SCM (étape 2)                                  │
+#  │  Rôle : normalisation et compression des symptômes bruts        │
+#  │  Ne contient aucune logique médicale                            │
+#  ├─────────────────────────────────────────────────────────────────┤
+#  │  COUCHE 2 — CLINICAL SCORING LAYER                              │
+#  │  BPU (étape 4) + TCE (étape 6) + CRE (étape 7) + RME (7b)      │
+#  │  Rôle : calcul probabiliste + ajustements temporels/cliniques   │
+#  │  C'est le cœur diagnostique — NE PAS MODIFIER sans validation  │
+#  ├─────────────────────────────────────────────────────────────────┤
+#  │  COUCHE 3 — SAFETY OVERRIDE LAYER                               │
+#  │  RFE (étape 3) + Emergency Override (étape 7c)                  │
+#  │  TCS (étape 8) + SGL (étape 10)                                 │
+#  │  Rôle : détection dangers, gestion incertitude, safety caps     │
+#  │  Priorité absolue sur le scoring — peut forcer un retour immédiat│
+#  ├─────────────────────────────────────────────────────────────────┤
+#  │  COUCHE 4 — OUTPUT EXPLANATION LAYER                            │
+#  │  LME (étape 9) + builders : differential, diagnostic_path,      │
+#  │  misdiagnosis_risk, worsening_signs, do_not_miss, test_details  │
+#  │  Rôle : construction de l'output lisible et cliniquement utile  │
+#  │  Extensible sans toucher aux couches 1–3                        │
+#  └─────────────────────────────────────────────────────────────────┘
+#
+# Règle d'extension :
+#  - Nouveau symptôme/diagnostic  → COUCHE 2 (data/symptoms.py)
+#  - Nouvelle règle de sécurité   → COUCHE 3 (rfe.py ou emergency_override.py)
+#  - Nouveau bloc d'output        → COUCHE 4 (orchestrator builders)
+#  - Nouveau format de réponse    → schemas.py uniquement
+
 def run(request: AnalyzeRequest) -> AnalyzeResponse:
     """
     Exécute le pipeline CORE v2 complet dans l'ordre strict.
     """
     _debug = request.debug
     trace = DebugTrace(engine_version=ENGINE_VERSION, rules_version=RULES_VERSION) if _debug else None
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # COUCHE 1 — PARSER LAYER
+    # ══════════════════════════════════════════════════════════════════════════
 
     # ── Étape 1 : NSE ─────────────────────────────────────────────────────────
     symptoms_canonical = nse.run(request.symptoms)
@@ -566,6 +604,10 @@ def run(request: AnalyzeRequest) -> AnalyzeResponse:
     symptoms_compressed = scm.run(symptoms_canonical)
     logger.debug(f"SCM → {symptoms_compressed}")
     if _debug: trace.symptoms_after_scm = list(symptoms_compressed)
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # COUCHE 3 — SAFETY OVERRIDE LAYER  (étapes 3, 7c, 8, 10)
+    # ══════════════════════════════════════════════════════════════════════════
 
     # ── Étape 3 : RFE ─────────────────────────────────────────────────────────
     rfe_result = rfe.run(symptoms_compressed)
@@ -584,6 +626,10 @@ def run(request: AnalyzeRequest) -> AnalyzeResponse:
         resp.tcs_level = "incertain"
         if _debug: resp.debug_trace = trace
         return resp
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # COUCHE 2 — CLINICAL SCORING LAYER  (étapes 4, 6, 7, 7b)
+    # ══════════════════════════════════════════════════════════════════════════
 
     # ── Étape 4 : BPU ─────────────────────────────────────────────────────────
     probs, incoherence_score = bpu.run(symptoms_compressed)
@@ -721,6 +767,10 @@ def run(request: AnalyzeRequest) -> AnalyzeResponse:
     diagnoses = _build_diagnosis_list(probs, symptom_set)
     diagnoses_names = [d.name for d in diagnoses]
 
+    # ══════════════════════════════════════════════════════════════════════════
+    # COUCHE 4 — OUTPUT EXPLANATION LAYER  (étapes 9 + builders)
+    # ══════════════════════════════════════════════════════════════════════════
+
     # ── Étape 9 : LME ─────────────────────────────────────────────────────────
     tests, cost, comparison, test_explanations, test_probabilities, test_costs = lme.run(
         diagnoses_names=diagnoses_names,
@@ -742,6 +792,38 @@ def run(request: AnalyzeRequest) -> AnalyzeResponse:
         trace.selected_tests = list(tests.required) + list(tests.optional)
         trace.sgl_warnings = list(sgl_warnings)
         trace.confidence_final = confidence_final
+
+        # ── Нові debug поля ───────────────────────────────────────────────────
+
+        # Emergency override
+        trace.emergency_override_triggered = eo_result.triggered
+        trace.emergency_override_patterns = eo_result.patterns_matched
+
+        # Confidence gap top1–top2
+        _sp = sorted(probs.values(), reverse=True)
+        trace.confidence_gap_top1_top2 = round((_sp[0] - _sp[1]) if len(_sp) >= 2 else 1.0, 3)
+
+        # Misdiagnosis risk
+        trace.misdiagnosis_risk = misdiagnosis_risk
+        trace.misdiagnosis_risk_score = misdiagnosis_risk_score
+
+        # Do not miss
+        trace.do_not_miss = do_not_miss
+
+        # Test priority reasoning
+        trace.test_priority_reasoning = [
+            f"{td['test']} — priorité {td['priority']}: {td['pourquoi']}"
+            for td in test_details[:3]
+            if td.get("in_required")
+        ]
+
+        # Diagnostic path summary
+        if diagnostic_path:
+            trace.diagnostic_path_summary = (
+                f"{diagnostic_path.get('main_hypothesis','?')} → "
+                f"{diagnostic_path.get('key_discriminator','?')} → "
+                f"{diagnostic_path.get('next_best_step','?')}"
+            )
 
     explanation = _build_explanation(symptoms_compressed, diagnoses, tests.required)
 

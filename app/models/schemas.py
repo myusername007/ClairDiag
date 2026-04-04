@@ -127,6 +127,28 @@ class DebugTrace(BaseModel):
     sgl_warnings: List[str] = []
     confidence_final: str = ""
 
+    # ── Nouveaux champs debug (hardening) ────────────────────────────────────
+
+    # Emergency override (étape 7c)
+    emergency_override_triggered: bool = False
+    emergency_override_patterns: List[str] = []
+
+    # Confidence gap top1–top2
+    confidence_gap_top1_top2: float = 0.0
+
+    # Misdiagnosis risk
+    misdiagnosis_risk: str = ""
+    misdiagnosis_risk_score: float = 0.0
+
+    # Do not miss
+    do_not_miss: List[str] = []
+
+    # Test priority reasoning (top 3 required)
+    test_priority_reasoning: List[str] = []
+
+    # Diagnostic path summary
+    diagnostic_path_summary: str = ""
+
 
 # ── Validation Mode (скрін від Романа) ───────────────────────────────────────
 
