@@ -156,9 +156,6 @@ def revaluate(request: RevaluateRequest) -> RevaluateResponse:
     # ERL — recalcul
     probs_after, changes_log = erl.run(probs_before, request.exam_results)
 
-    # Structured tests_impact
-    tests_impact = _build_tests_impact(probs_before, probs_after, request.exam_results, diagnoses_after)
-
     # Levels after
     tcs_after, confidence_level, _ = tcs_run(probs_after, len(symptoms), symptoms=symptoms)
     urgency_after = rme_run(probs_after)
@@ -169,12 +166,15 @@ def revaluate(request: RevaluateRequest) -> RevaluateResponse:
         confidence_level=confidence_level,
     )
 
-    # Diagnostics after
+    # Diagnostics after — обраховуємо ДО tests_impact
     diagnoses_after = [
         Diagnosis(name=n, probability=round(p, 2))
         for n, p in sorted(probs_after.items(), key=lambda x: -x[1])[:3]
         if p >= 0.15
     ]
+
+    # Structured tests_impact — тільки діагнози з diagnoses_after
+    tests_impact = _build_tests_impact(probs_before, probs_after, request.exam_results, diagnoses_after)
 
     misdiag_after = _compute_misdiagnosis_risk_simple(probs_after, len(symptoms))
     decision_after = _build_decision(
