@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
 from app.models.schemas import (
     AnalyzeRequest, AnalyzeResponse, ParseSymptomsRequest,
@@ -419,7 +420,3 @@ def _build_reasoning_summary(
     if decision_before != decision_after:
         summary += f" Décision modifiée : {decision_before} → {decision_after}."
     return summary
-
-
-# Fix Optional import
-from typing import Optional
