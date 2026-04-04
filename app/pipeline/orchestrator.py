@@ -713,11 +713,13 @@ def run(request: AnalyzeRequest) -> AnalyzeResponse:
     urgency_level = rme.run(probs, symptoms=symptoms_compressed)
 
     # ── Safety override : douleur thoracique isolée → élevé ──────────────────
-    # RME peut retourner faible si BPU normalise sous le seuil (1 symptôme seul).
-    # Règle de sécurité : douleur thoracique avec ≤ 2 symptômes → élevé minimum.
-    _CARDIAC_SAFETY_SYMS: frozenset = frozenset({"douleur thoracique"})
-    if (_CARDIAC_SAFETY_SYMS.issubset(set(symptoms_compressed))
-            and len(symptoms_compressed) <= 2
+    # Vérifie request.symptoms (avant NSE/SCM) — douleur thoracique peut être
+    # droppée par le pipeline si aucun diagnostic n'atteint le seuil.
+    _raw_syms = set(s.lower().strip() for s in request.symptoms)
+    _CARDIAC_RAW = {"douleur thoracique", "douleur poitrine", "douleur à la poitrine",
+                    "douleur au thorax", "mal à la poitrine", "douleur thoracique intense"}
+    if (_raw_syms & _CARDIAC_RAW
+            and len(request.symptoms) <= 2
             and urgency_level == "faible"):
         urgency_level = "élevé"
     logger.debug(f"RME → urgency={urgency_level}")
