@@ -9,6 +9,7 @@
 #
 # Source unique des données : app/data/tests.py
 
+from app.models.schemas import Tests
 from app.data.tests import (
     TEST_CATALOG,
     TEST_COSTS,
@@ -20,7 +21,6 @@ from app.data.tests import (
     CONDITIONAL_REQUIRED,
     CONSULTATION_COST,
 )
-from app.models.schemas import Tests, Cost, Comparison
 
 _MAX_REQUIRED_TESTS: int = 3
 
@@ -48,7 +48,7 @@ def run(
     diagnoses_names: list[str],
     symptom_set: set[str],
     probs: dict[str, float],
-) -> tuple[Tests, Cost, Comparison, dict, dict, dict]:
+) -> tuple[object, dict, dict, dict, dict, dict]:
     """
     Sélectionne les tests selon le score valeur/coût.
     Retourne : (Tests, Cost, Comparison, test_explanations, test_probabilities, test_costs)
@@ -191,26 +191,9 @@ def run(
     }
 
     tests = Tests(required=required_list, optional=optional_list)
-    cost = Cost(required=optimized_cost, optional=optional_cost, savings=savings)
-    comparison = Comparison(
-        standard_tests=sorted(standard_set),
-        standard_cost=standard_cost,
-        optimized_tests=required_list,
-        optimized_cost=optimized_cost,
-        savings=savings,
-        savings_multiplier=(
-            f"~{round(standard_cost / optimized_cost, 1)}x moins cher"
-            if optimized_cost > 0 else "—"
-        ),
-        cost_note=(
-            f"Parcours optimisé : ~{opt_min}€–{opt_max}€ | "
-            f"Parcours standard : ~{round(std_min)}€–{round(std_max)}€. "
-            "Tarifs orientatifs France (secteur 1 / Assurance Maladie). "
-            "Sélection basée sur le rapport valeur diagnostique / coût."
-        ),
-    )
 
     test_explanations = {t: TEST_EXPLANATIONS[t] for t in required_list if t in TEST_EXPLANATIONS}
     test_costs_out = {t: TEST_COSTS[t] for t in standard_set if t in TEST_COSTS}
 
-    return tests, cost, comparison, test_explanations, test_probabilities, test_costs_out
+    # Return Tests + placeholder dicts (cost/comparison removed per ТЗ)
+    return tests, {}, {}, test_explanations, test_probabilities, test_costs_out
