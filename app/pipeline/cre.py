@@ -55,7 +55,14 @@ _RULES: list[tuple[set[str], set[str], str, float]] = [
     # Fièvre + toux → Grippe plus probable que Bronchite
     ({"fièvre", "toux"}, {"essoufflement"}, "Grippe", +0.08),
     ({"fièvre", "toux"}, {"essoufflement"}, "Bronchite", -0.05),
-    # Fièvre + essoufflement → Pneumonie plus probable que Bronchite
+    # Toux + fatigue + fièvre SANS courbatures → Bronchite plus probable que Grippe
+    # (Grippe typique = début brutal + courbatures fortes)
+    ({"toux", "fatigue"}, {"courbatures", "essoufflement"}, "Bronchite", +0.08),
+    ({"toux", "fatigue"}, {"courbatures", "essoufflement"}, "Grippe",    -0.06),
+    # Sifflement → profil asthmatique → Pneumonie moins probable
+    ({"sifflement"}, set(), "Pneumonie", -0.15),
+    # Fièvre élevée + essoufflement → Pneumonie plus probable
+    # (uniquement sans sifflement — avec sifflement c'est asthme)
     ({"fièvre", "essoufflement"}, set(), "Pneumonie", +0.12),
     # RGO profile → Angor moins probable
     ({"brûlure rétrosternale"}, {"essoufflement", "syncope"}, "Angor", -0.10),

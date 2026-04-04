@@ -107,44 +107,91 @@ def run(
     top_prob = max(probs.values())
     top_diag = max(probs, key=probs.get)
 
-    # TCS level
-    _ALWAYS_NEEDS_TESTS: set[str] = {"Insuffisance cardiaque", "Embolie pulmonaire", "Trouble du rythme", "RGO", "SII"}
+    # ── TCS decision logic ──────────────────────────────────────────────────
+    # Groupes de diagnostics par comportement TCS :
+    #
+    # ALWAYS_NEEDS_TESTS : jamais fort (confirmation biologique obligatoire)
+    # NEEDS_TESTS_IF_STRONG : besoin_tests si symptom_count >= 2, incertain sinon
+    # LIGHT : incertain sauf profil fort (>= 3 symptômes ET top_prob >= 0.75)
+    # Pneumonie : fort autorisé si >= 5 symptômes
+    # Autres (Angor, Hypertension...) : logique prob pure
+
+    _ALWAYS_NEEDS_TESTS: set[str] = {
+        "Insuffisance cardiaque", "Embolie pulmonaire", "Trouble du rythme",
+        "RGO", "SII",
+    }
+    _NEEDS_TESTS_IF_STRONG: set[str] = {
+        "Asthme", "Bronchite", "Pneumonie",
+    }
+    _LIGHT_DIAGNOSES: set[str] = {
+        "Gastrite", "Rhinopharyngite", "Allergie",
+    }
+    # Infectieux : besoin_tests si fièvre présente, incertain si profil très léger
+    _INFECTIEUX: set[str] = {"Grippe", "Angine"}
+
+    _syms_set = set(symptoms or [])
+    has_fievre = "fièvre" in _syms_set
+
+    # Étape 1 : score brut basé sur top_prob
     if top_prob >= 0.90:
         tcs_level = "fort"
     elif top_prob >= 0.75:
         tcs_level = "besoin_tests"
     else:
         tcs_level = "incertain"
-    # Certains diagnostics nécessitent toujours des tests
-    if tcs_level == "fort" and max(probs, key=probs.get) in _ALWAYS_NEEDS_TESTS:
-        tcs_level = "besoin_tests"
 
-    # Threshold Guard — fort дозволений тільки при всіх умовах
-    # 1. symptom_count > 2
-    # 2. incoherence_score < 0.15
-    # 3. top_prob > 0.75
-    # 4. confidence_score >= 0.40
-    # 5. НОВИЙ: key_symptoms >= 2 (мінімум 2 симптоми покривають top діагноз)
+    # Étape 2 : overrides par groupe de diagnostic
+
+    # Jamais fort; et si 1 seul symptôme → incertain même pour ces diagnostics
+    if tcs_level == "fort" and top_diag in _ALWAYS_NEEDS_TESTS:
+        tcs_level = "besoin_tests"
+    if top_diag in _ALWAYS_NEEDS_TESTS and symptom_count < 2:
+        tcs_level = "incertain"
+
+    # Pneumonie : fort seulement si profil très complet (>= 5 symptômes)
+    if top_diag == "Pneumonie":
+        if symptom_count >= 5 and top_prob >= 0.75:
+            tcs_level = "fort"
+        elif symptom_count >= 2 and top_prob >= 0.75:
+            tcs_level = "besoin_tests"
+        else:
+            tcs_level = "incertain"
+
+    # Asthme / Bronchite : besoin_tests si >= 2 symptômes, incertain sinon
+    # (jamais fort — confirmation spirométrie/Rx nécessaire)
+    if top_diag in _NEEDS_TESTS_IF_STRONG - {"Pneumonie"}:
+        if tcs_level == "fort":
+            tcs_level = "besoin_tests"
+        if symptom_count < 2:
+            tcs_level = "incertain"
+
+    # Diagnostics légers : incertain si <= 3 symptômes (Gastrite, Rhinopharyngite, Allergie)
+    if top_diag in _LIGHT_DIAGNOSES and symptom_count <= 3:
+        tcs_level = "incertain"
+
+    # Infectieux (Grippe, Angine) :
+    # - fièvre présente ET symptom_count >= 2 → besoin_tests (bilan infectieux justifié)
+    # - sinon → incertain
+    if top_diag in _INFECTIEUX:
+        if tcs_level == "fort":
+            tcs_level = "besoin_tests"
+        if has_fievre and symptom_count >= 2:
+            tcs_level = "besoin_tests"
+        elif not has_fievre or symptom_count < 2:
+            tcs_level = "incertain"
+
+    # Threshold Guard final — fort seulement si profil vraiment solide
     if tcs_level == "fort":
         if symptom_count <= _LOW_DATA_THRESHOLD:
             tcs_level = "besoin_tests"
         elif incoherence_score > 0.15:
             tcs_level = "besoin_tests"
-        elif top_prob <= 0.75:
-            tcs_level = "besoin_tests"
         else:
-            # Перевірка coverage — мінімум 2 симптоми покривають top діагноз
             _syms = symptoms or []
-            _top_diag = max(probs, key=probs.get) if probs else ""
-            _diag_syms = {sym for sym, diags in SYMPTOM_DIAGNOSES.items() if _top_diag in diags}
+            _diag_syms = {sym for sym, diags in SYMPTOM_DIAGNOSES.items() if top_diag in diags}
             _covered = len(set(_syms) & _diag_syms)
             if _covered < 2:
                 tcs_level = "besoin_tests"
-            else:
-                # Перевірка confidence — обчислюємо попередньо
-                _pre_conf = _compute_confidence(probs, _syms, incoherence_score)
-                if _pre_conf < 0.32:
-                    tcs_level = "besoin_tests"
 
     # Composite confidence
     syms = symptoms or []

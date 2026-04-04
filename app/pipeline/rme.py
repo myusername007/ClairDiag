@@ -8,7 +8,8 @@
 from app.data.symptoms import URGENT_DIAGNOSES
 
 # Diagnostics à risque modéré (nécessitent attention mais pas urgence immédiate)
-_MODERATE_RISK_DIAGNOSES: set[str] = {"Hypertension", "Insuffisance cardiaque", "Trouble du rythme"}
+# Trouble du rythme retiré : palpitations isolées sans syncope/douleur → faible
+_MODERATE_RISK_DIAGNOSES: set[str] = {"Hypertension", "Insuffisance cardiaque"}
 
 # Seuils de déclenchement
 _HIGH_RISK_THRESHOLD: float = 0.40
@@ -47,11 +48,16 @@ def run(probs: dict[str, float]) -> str:
     if top_diag in _MODERATE_RISK_DIAGNOSES and top_prob >= 0.50:
         return "modéré"
 
+    # Trouble du rythme → modéré seulement si présent avec d'autres signaux (malaise, fatigue)
+    # palpitations seules → faible (géré plus bas)
+    if probs.get("Trouble du rythme", 0) >= 0.70:
+        return "modéré"
+
     # Risque urgent dans le différentiel (top3)
     sorted_diags = sorted(probs.items(), key=lambda x: -x[1])[:3]
     for diag, prob in sorted_diags:
         if diag in URGENT_DIAGNOSES and prob >= 0.44:
-            return "élevé"   # urgent probable dans top3
+            return "élevé"
         if diag in URGENT_DIAGNOSES and prob >= 0.35:
             return "modéré"
 
