@@ -186,6 +186,22 @@ class AnalyzeResponse(BaseModel):
     # Bloc D — Test value prioritization (priority / pourquoi / confirme / exclut)
     test_details: List[dict] = []
 
+    # Bloc F — Chemin diagnostique recommandé
+    diagnostic_path: dict = {}
+
+    # Bloc G — Risque d'erreur diagnostique
+    misdiagnosis_risk: str = "faible"        # faible | modéré | élevé
+    misdiagnosis_risk_score: float = 0.0
+
+    # Bloc 3B — Signes d'aggravation à surveiller
+    worsening_signs: List[str] = []
+
+    # Bloc 3C — Limites de l'analyse
+    analysis_limits: List[str] = []
+
+    # Bloc 4C — Diagnostics graves à exclure (do not miss)
+    do_not_miss: List[str] = []
+
 
 # ── Exam Re-evaluation Loop (Sprint 3, étape 5) ───────────────────────────────
 

@@ -123,6 +123,196 @@ def _build_explanation(symptoms: list[str], diagnoses: list[Diagnosis], required
     return start + alt + tests_hint
 
 
+def _build_diagnostic_path(
+    diagnoses: list[Diagnosis],
+    urgency_level: str,
+    tcs_level: str,
+) -> dict:
+    """Bloc F — Chemin diagnostique recommandé."""
+    if not diagnoses:
+        return {}
+
+    top = diagnoses[0].name
+
+    # Étape suivante selon urgence + TCS
+    if urgency_level == "élevé":
+        next_step = "Consultation urgente ou appel du 15 selon l'évolution"
+    elif tcs_level in ("TCS_1", "TCS_2"):
+        next_step = "Consultation médicale rapide + examens complémentaires"
+    elif tcs_level == "TCS_3":
+        next_step = "Consultation non urgente pour confirmation diagnostique"
+    else:
+        next_step = "Surveillance des symptômes — consulter si persistance ou aggravation"
+
+    # Risques à ne pas manquer selon top diagnostic
+    _DO_NOT_MISS_MAP: dict[str, str] = {
+        "Asthme":              "Exacerbation sévère / état de mal asthmatique",
+        "Bronchite":           "Évolution vers pneumonie si fièvre ou aggravation",
+        "Pneumonie":           "Détresse respiratoire — hospitalisation si SpO2 < 94%",
+        "Grippe":              "Complications pulmonaires chez les sujets à risque",
+        "Angine":              "Angine de Ludwig / abcès périamygdalien",
+        "Angor":               "Syndrome coronarien aigu — ECG urgent",
+        "Embolie pulmonaire":  "Choc obstructif — urgence vitale immédiate",
+        "Insuffisance cardiaque": "Décompensation aiguë — hospitalisation",
+        "Trouble du rythme":   "Fibrillation ventriculaire — urgence cardiologique",
+        "Gastrite":            "Ulcère compliqué / hémorragie digestive",
+        "RGO":                 "Origine cardiaque à écarter si douleur atypique",
+        "SII":                 "Pathologie organique sous-jacente (MICI, cancer colorectal)",
+        "Hypertension":        "Urgence hypertensive / AVC ischémique",
+        "Anémie":              "Origine hémorragique ou hémopathie maligne",
+    }
+    risk_not_to_miss = _DO_NOT_MISS_MAP.get(top, "Surveillance de l'évolution clinique")
+
+    # Test discriminant clé
+    _KEY_TEST_MAP: dict[str, str] = {
+        "Pneumonie": "Rx thorax + CRP",
+        "Embolie pulmonaire": "D-dimères + Scanner thoracique",
+        "Angor": "ECG + Troponine",
+        "Insuffisance cardiaque": "BNP + ECG + Échocardiographie",
+        "Trouble du rythme": "ECG + Holter ECG",
+        "Asthme": "Spirométrie",
+        "Bronchite": "Rx thorax si fièvre",
+        "RGO": "pH-métrie",
+        "SII": "Coloscopie si > 50 ans ou signes d'alarme",
+        "Grippe": "Test rapide grippe si disponible",
+        "Angine": "Test rapide Strep A",
+        "Hypertension": "Mesure tensionnelle répétée",
+        "Anémie": "NFS + bilan martial",
+    }
+    key_discriminator = _KEY_TEST_MAP.get(top, "Bilan biologique de base (NFS, CRP)")
+
+    return {
+        "main_hypothesis": top,
+        "risk_not_to_miss": risk_not_to_miss,
+        "key_discriminator": key_discriminator,
+        "next_best_step": next_step,
+    }
+
+
+def _build_misdiagnosis_risk(
+    diagnoses: list[Diagnosis],
+    probs: dict[str, float],
+    symptom_count: int,
+    tcs_level: str,
+    incoherence_score: float,
+) -> tuple[str, float]:
+    """Bloc G — Risque d'erreur diagnostique (faible | modéré | élevé)."""
+    score = 0.0
+
+    # Gap top1–top2 faible → ambiguïté
+    sorted_p = sorted(probs.values(), reverse=True)
+    gap = (sorted_p[0] - sorted_p[1]) if len(sorted_p) >= 2 else 1.0
+    if gap < 0.10:
+        score += 0.35
+    elif gap < 0.20:
+        score += 0.20
+
+    # Peu de données
+    if symptom_count <= 2:
+        score += 0.25
+    elif symptom_count <= 3:
+        score += 0.10
+
+    # Incoherence
+    if incoherence_score > 0.20:
+        score += 0.20
+    elif incoherence_score > 0.10:
+        score += 0.10
+
+    # TCS bas
+    if tcs_level == "TCS_4":
+        score += 0.20
+    elif tcs_level == "TCS_3":
+        score += 0.10
+
+    # Plusieurs diagnostics proches dans top3
+    if len(diagnoses) >= 3:
+        p2 = diagnoses[1].probability if len(diagnoses) > 1 else 0
+        p3 = diagnoses[2].probability if len(diagnoses) > 2 else 0
+        if p3 > 0.25:
+            score += 0.15
+
+    score = round(min(score, 1.0), 3)
+
+    if score >= 0.50:
+        level = "élevé"
+    elif score >= 0.25:
+        level = "modéré"
+    else:
+        level = "faible"
+
+    return level, score
+
+
+def _build_worsening_signs(diagnoses: list[Diagnosis], urgency_level: str) -> list[str]:
+    """Bloc 3B — Signes d'aggravation à surveiller."""
+    _BASE_SIGNS = [
+        "Aggravation progressive des symptômes",
+        "Apparition de fièvre élevée (> 39°C)",
+        "Altération de l'état général",
+    ]
+    _DIAG_SIGNS: dict[str, list[str]] = {
+        "Pneumonie":           ["Aggravation de l'essoufflement", "Cyanose / lèvres bleues", "Confusion"],
+        "Embolie pulmonaire":  ["Douleur thoracique brutale", "Syncope", "Crachats sanglants"],
+        "Angor":               ["Douleur thoracique persistante ou au repos", "Irradiation au bras / mâchoire"],
+        "Insuffisance cardiaque": ["Oedèmes des membres inférieurs", "Orthopnée", "Essoufflement nocturne"],
+        "Trouble du rythme":   ["Palpitations soutenues", "Syncope", "Malaise avec perte de connaissance"],
+        "Asthme":              ["Sifflement intense", "Incapacité à parler", "SpO2 < 94%"],
+        "Grippe":              ["Fièvre persistante > 5 jours", "Douleur thoracique", "Confusion"],
+        "Angine":              ["Stridor / difficulté à avaler", "Trismus", "Gonflement cervical"],
+        "Gastrite":            ["Vomissements de sang", "Selles noires", "Douleur abdominale sévère"],
+        "SII":                 ["Perte de poids inexpliquée", "Sang dans les selles", "Douleur nocturne"],
+        "Hypertension":        ["Céphalées sévères brutales", "Troubles visuels", "Confusion"],
+    }
+    top_name = diagnoses[0].name if diagnoses else ""
+    specific = _DIAG_SIGNS.get(top_name, [])
+
+    if urgency_level == "élevé":
+        return specific[:3] + ["→ Appeler le 15 (SAMU) sans délai si ces signes apparaissent"]
+    return (_BASE_SIGNS + specific)[:5]
+
+
+def _build_do_not_miss(diagnoses: list[Diagnosis], urgency_level: str) -> list[str]:
+    """Bloc 4C — Diagnostics graves à ne pas manquer."""
+    _ALWAYS_CONSIDER: list[str] = []
+
+    top3_names = {d.name for d in diagnoses}
+
+    _DANGER_BY_PROFILE: dict[str, list[str]] = {
+        "Pneumonie":       ["Embolie pulmonaire", "Insuffisance cardiaque"],
+        "Bronchite":       ["Pneumonie", "Embolie pulmonaire"],
+        "Asthme":          ["Pneumonie", "Embolie pulmonaire"],
+        "Angor":           ["Embolie pulmonaire", "Syndrome coronarien aigu"],
+        "Gastrite":        ["Ulcère perforé", "Infarctus mésentérique"],
+        "RGO":             ["Syndrome coronarien aigu"],
+        "Trouble du rythme": ["Fibrillation ventriculaire", "Bloc auriculo-ventriculaire"],
+        "Grippe":          ["Pneumonie", "Sepsis"],
+        "Angine":          ["Abcès périamygdalien", "Épiglottite"],
+        "Rhinopharyngite": ["Sinusite compliquée", "Méningite si raideur nuque"],
+    }
+
+    result: list[str] = []
+    for d in diagnoses[:2]:
+        for item in _DANGER_BY_PROFILE.get(d.name, []):
+            if item not in top3_names and item not in result:
+                result.append(item)
+
+    # Toujours inclure Embolie si profil respiratoire + urgence
+    if urgency_level == "élevé" and "Embolie pulmonaire" not in top3_names and "Embolie pulmonaire" not in result:
+        result.insert(0, "Embolie pulmonaire")
+
+    return result[:4]
+
+
+def _build_analysis_limits() -> list[str]:
+    """Bloc 3C — Limites de l'analyse."""
+    return [
+        "Analyse d'orientation clinique, non substitutive à un examen médical complet.",
+        "Confirmation nécessaire si symptômes persistants, atypiques ou aggravés.",
+        "Basé sur une analyse probabiliste — ne remplace pas l'évaluation clinique directe.",
+    ]
+
+
 def _build_differential(
     diagnoses: list[Diagnosis],
     probs: dict[str, float],
@@ -561,6 +751,23 @@ def run(request: AnalyzeRequest) -> AnalyzeResponse:
     # ── Bloc D : Test value prioritization ────────────────────────────────────
     test_details = _build_test_details(tests.required, tests.optional, diagnoses_names)
 
+    # ── Bloc F : Chemin diagnostique ──────────────────────────────────────────
+    diagnostic_path = _build_diagnostic_path(diagnoses, urgency_level, tcs_level)
+
+    # ── Bloc G : Misdiagnosis risk ─────────────────────────────────────────────
+    misdiagnosis_risk, misdiagnosis_risk_score = _build_misdiagnosis_risk(
+        diagnoses, probs, len(symptoms_compressed), tcs_level, incoherence_score
+    )
+
+    # ── Bloc 3B : Signes d'aggravation ────────────────────────────────────────
+    worsening_signs = _build_worsening_signs(diagnoses, urgency_level)
+
+    # ── Bloc 4C : Do not miss ─────────────────────────────────────────────────
+    do_not_miss = _build_do_not_miss(diagnoses, urgency_level)
+
+    # ── Bloc 3C : Limites de l'analyse ────────────────────────────────────────
+    analysis_limits = _build_analysis_limits()
+
     # Validation mode
     validation = None
     if request.validation_mode:
@@ -594,4 +801,10 @@ def run(request: AnalyzeRequest) -> AnalyzeResponse:
         validation=validation,
         differential=differential,
         test_details=test_details,
+        diagnostic_path=diagnostic_path,
+        misdiagnosis_risk=misdiagnosis_risk,
+        misdiagnosis_risk_score=misdiagnosis_risk_score,
+        worsening_signs=worsening_signs,
+        do_not_miss=do_not_miss,
+        analysis_limits=analysis_limits,
     )
