@@ -28,52 +28,58 @@ def _compute_confidence(
     incoherence_score: float,
 ) -> float:
     """
-    Confidence composite 0.0–1.0.
+    Confidence composite recalibrée 0.0–1.0.
 
-    composante 1 — couverture :
-        nb symptômes qui contribuent au top diagnostic / nb total symptômes
-    composante 2 — cohérence :
-        écart normalisé entre top et 2e probabilité
-    composante 3 — qualité données :
-        score basé sur le nombre de symptômes (sature à 1.0 à partir de 4)
+    5 composantes :
+      1. couverture       — symptômes couverts par le top diagnostic
+      2. gap_top1_top2    — séparation entre top1 et top2 (plus large = plus clair)
+      3. qualité données  — nombre de symptômes (sature à 4)
+      4. red_flag penalty — présence de symptômes urgents dégrade la certitude
+      5. incoherence      — pénalité si profil contradictoire
+
+    Règle clé : si gap top1–top2 < 0.10, confidence plafonné à 0.55 (modéré max).
     """
     if not probs:
         return 0.0
 
     sorted_probs = sorted(probs.values(), reverse=True)
-    top_prob = sorted_probs[0]
     top_diag = max(probs, key=probs.get)
+    n = len(symptoms)
+    symptom_set = set(symptoms)
 
     # Composante 1 — couverture
-    # SYMPTOM_DIAGNOSES est {symptôme: {diag: weight}} — on inverse la recherche
     diag_symptoms = {sym for sym, diags in SYMPTOM_DIAGNOSES.items() if top_diag in diags}
-    symptom_set = set(symptoms)
-    if symptom_set:
-        couverture = len(symptom_set & diag_symptoms) / len(symptom_set)
-    else:
-        couverture = 0.0
+    couverture = len(symptom_set & diag_symptoms) / len(symptom_set) if symptom_set else 0.0
 
-    # Composante 2 — cohérence (séparation entre top et 2e)
-    if len(sorted_probs) >= 2:
-        gap = sorted_probs[0] - sorted_probs[1]
-        coherence = min(gap / 0.30, 1.0)   # gap de 0.30 = cohérence max
-    else:
-        coherence = 1.0   # un seul diagnostic = pas d'ambiguïté
+    # Composante 2 — gap top1 vs top2
+    gap = (sorted_probs[0] - sorted_probs[1]) if len(sorted_probs) >= 2 else 1.0
+    coherence = min(gap / 0.30, 1.0)
 
     # Composante 3 — qualité données
-    n = len(symptoms)
-    qualite = min(n / 4.0, 1.0)   # sature à 4 symptômes
+    qualite = min(n / 4.0, 1.0)
+
+    # Composante 4 — red flag presence (urgents réduisent la certitude diagnostic)
+    _RED_FLAG_SYMS: frozenset[str] = frozenset({
+        "syncope", "cyanose", "hémoptysie", "perte de connaissance",
+        "détresse respiratoire", "déficit neurologique", "confusion aiguë",
+    })
+    has_red_flag = bool(symptom_set & _RED_FLAG_SYMS)
+    red_flag_penalty = 0.10 if has_red_flag else 0.0
 
     # Score composite pondéré
-    score = 0.40 * couverture + 0.35 * coherence + 0.25 * qualite
+    score = 0.35 * couverture + 0.35 * coherence + 0.20 * qualite - red_flag_penalty
 
-    # Pénalité incoherence (ТЗ п.6)
+    # Pénalité incoherence
     score -= incoherence_score * _INCOHERENCE_PENALTY_PER_UNIT
     score = max(0.0, score)
 
-    # Cap si données insuffisantes (ТЗ п.5)
+    # Cap hard si gap trop faible — deux hypothèses proches = incertitude réelle
+    if gap < 0.10:
+        score = min(score, 0.55)
+
+    # Cap si données insuffisantes
     if n <= 1:
-        score = min(score, 0.35)   # 1 symptôme → max faible
+        score = min(score, 0.35)
     elif n <= _LOW_DATA_THRESHOLD:
         score = min(score, _LOW_DATA_CAP)
 

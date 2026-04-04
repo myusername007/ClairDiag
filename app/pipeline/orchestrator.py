@@ -17,6 +17,7 @@
 import logging
 
 from app.pipeline import nse, scm, rfe, bpu, rme, tce, cre, tcs, lme, sgl
+from app.pipeline import emergency_override as eo
 from app.data.symptoms import DIAG_ARTICLE, URGENT_DIAGNOSES
 from app.data.tests import TEST_EXPLANATIONS, CONSULTATION_COST
 from app.models.schemas import (
@@ -120,6 +121,131 @@ def _build_explanation(symptoms: list[str], diagnoses: list[Diagnosis], required
         tests_hint = f" Pour une première évaluation : {joined}."
 
     return start + alt + tests_hint
+
+
+def _build_differential(
+    diagnoses: list[Diagnosis],
+    probs: dict[str, float],
+    symptoms_compressed: list[str],
+) -> dict:
+    """
+    Bloc C — Diagnostic différentiel structuré.
+    Retourne un dict avec : principal, alternatives, discriminant, gap_note.
+    """
+    from app.data.symptoms import SYMPTOM_DIAGNOSES
+
+    if not diagnoses:
+        return {}
+
+    top = diagnoses[0]
+    alternatives = [d.name for d in diagnoses[1:]]
+
+    # Gap top1–top2
+    sorted_p = sorted(probs.values(), reverse=True)
+    gap = round(sorted_p[0] - sorted_p[1], 2) if len(sorted_p) >= 2 else 1.0
+
+    if gap >= 0.25:
+        gap_note = f"Hypothèse principale nettement dominante (écart {gap:.0%})."
+    elif gap >= 0.10:
+        gap_note = f"Deux hypothèses proches (écart {gap:.0%}) — examens nécessaires pour trancher."
+    else:
+        gap_note = f"Profil ambiguë (écart {gap:.0%}) — diagnostic incertain sans bilan."
+
+    # Symptômes discriminants : présents pour top1 mais pas pour top2
+    ss = set(symptoms_compressed)
+    top1_syms = {s for s, d in SYMPTOM_DIAGNOSES.items() if top.name in d}
+    top2_syms: set[str] = set()
+    if alternatives:
+        top2_syms = {s for s, d in SYMPTOM_DIAGNOSES.items() if alternatives[0] in d}
+    discriminant_syms = sorted(ss & top1_syms - top2_syms)
+
+    # Tests discriminants selon les paires de diagnostics
+    _DISCRIMINANT_TESTS: dict[frozenset, list[str]] = {
+        frozenset({"Asthme", "Bronchite"}):          ["Spirométrie", "Rx thorax"],
+        frozenset({"Asthme", "Pneumonie"}):          ["Rx thorax", "CRP"],
+        frozenset({"Pneumonie", "Bronchite"}):       ["Rx thorax", "CRP", "NFS"],
+        frozenset({"Angor", "Embolie pulmonaire"}):  ["ECG", "D-dimères", "Troponine"],
+        frozenset({"Angor", "Insuffisance cardiaque"}): ["ECG", "BNP", "Troponine"],
+        frozenset({"Grippe", "Angine"}):             ["Test rapide Strep A"],
+        frozenset({"Gastrite", "RGO"}):              ["pH-métrie", "Test Helicobacter pylori"],
+        frozenset({"Gastrite", "SII"}):              ["NFS", "CRP", "Coloscopie"],
+    }
+    pair = frozenset({top.name, alternatives[0]}) if alternatives else frozenset()
+    discriminant_tests = _DISCRIMINANT_TESTS.get(pair, [])
+
+    return {
+        "principal": top.name,
+        "principal_probability": top.probability,
+        "alternatives": alternatives,
+        "gap_note": gap_note,
+        "discriminant_symptoms": discriminant_syms,
+        "discriminant_tests": discriminant_tests,
+    }
+
+
+def _build_test_details(
+    required: list[str],
+    optional: list[str],
+    diagnoses_names: list[str],
+) -> list[dict]:
+    """
+    Bloc D — Test value prioritization.
+    Pour chaque test : pourquoi, confirme, exclut, priorité.
+    """
+    from app.data.tests import TEST_CATALOG
+
+    _PRIORITY_OVERRIDE: dict[str, str] = {
+        "D-dimères":             "haute",
+        "ECG":                   "haute",
+        "Troponine":             "haute",
+        "BNP":                   "haute",
+        "NFS":                   "moyenne",
+        "CRP":                   "moyenne",
+        "Rx thorax":             "moyenne",
+        "Spirométrie":           "moyenne",
+        "Scanner thoracique":    "haute",
+        "pH-métrie":             "moyenne",
+        "Test rapide Strep A":   "moyenne",
+        "Holter ECG":            "faible",
+        "TSH":                   "faible",
+        "Échocardiographie":     "faible",
+        "Fibroscopie gastrique": "faible",
+        "Coloscopie":            "faible",
+    }
+
+    details = []
+    top1 = diagnoses_names[0] if diagnoses_names else ""
+    top3 = diagnoses_names[:3]
+
+    for test in required + optional:
+        catalog = TEST_CATALOG.get(test, {})
+        dv = catalog.get("diagnostic_value", {})
+        expl = catalog.get("explanation", "")
+
+        # Confirme : diagnostics où la valeur diagnostique est élevée
+        confirms = [d for d in top3 if dv.get(d, 0) >= 0.60]
+        # Exclut : diagnostics où la valeur est très basse (< 0.15) mais qui sont dans le différentiel
+        excludes = [d for d in top3 if 0 < dv.get(d, 0) < 0.15]
+
+        # Priorité
+        if test in required:
+            priority = _PRIORITY_OVERRIDE.get(test, "haute")
+        else:
+            priority = _PRIORITY_OVERRIDE.get(test, "faible")
+
+        details.append({
+            "test": test,
+            "priority": priority,
+            "in_required": test in required,
+            "pourquoi": expl or f"Évaluation pour {top1}",
+            "confirme": confirms,
+            "exclut": excludes,
+        })
+
+    # Trier : required en premier, puis par priorité
+    _PRIO_ORDER = {"haute": 0, "moyenne": 1, "faible": 2}
+    details.sort(key=lambda x: (0 if x["in_required"] else 1, _PRIO_ORDER.get(x["priority"], 9)))
+    return details
 
 
 def _build_validation(
@@ -351,6 +477,21 @@ def run(request: AnalyzeRequest) -> AnalyzeResponse:
     urgency_level = rme.run(probs)
     logger.debug(f"RME → urgency={urgency_level}")
 
+    # ── Étape 7c : Emergency Override — patterns absolus post-score ───────────
+    eo_result = eo.run(symptoms_compressed)
+    if eo_result.triggered:
+        logger.warning(f"EMERGENCY OVERRIDE → {eo_result.reason} | patterns={eo_result.patterns_matched}")
+        resp = _empty_response(
+            f"URGENCE MÉDICALE : {eo_result.reason}. "
+            "Arrêtez cette application et appelez le 15 (SAMU) ou le 112 immédiatement."
+        )
+        resp.emergency_flag = True
+        resp.emergency_reason = eo_result.reason
+        resp.urgency_level = "élevé"
+        resp.tcs_level = "incertain"
+        if _debug: resp.debug_trace = trace
+        return resp
+
     # ── Étape 8 : TCS ─────────────────────────────────────────────────────────
     probs_before_tcs = dict(probs)
     tcs_level, confidence_level, confidence_score = tcs.run(
@@ -414,6 +555,12 @@ def run(request: AnalyzeRequest) -> AnalyzeResponse:
 
     explanation = _build_explanation(symptoms_compressed, diagnoses, tests.required)
 
+    # ── Bloc C : Diagnostic différentiel ──────────────────────────────────────
+    differential = _build_differential(diagnoses, probs, symptoms_compressed)
+
+    # ── Bloc D : Test value prioritization ────────────────────────────────────
+    test_details = _build_test_details(tests.required, tests.optional, diagnoses_names)
+
     # Validation mode
     validation = None
     if request.validation_mode:
@@ -445,4 +592,6 @@ def run(request: AnalyzeRequest) -> AnalyzeResponse:
         consultation_cost=CONSULTATION_COST,
         debug_trace=trace,
         validation=validation,
+        differential=differential,
+        test_details=test_details,
     )
