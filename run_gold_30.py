@@ -48,16 +48,16 @@ CASES = [
          onset=None, duration=None,
          exp_top1="Asthme",
          exp_top3=["Asthme", "Bronchite"],
-         exp_urg="faible", exp_tcs="incertain", exp_emrg=False,
+         exp_urg="faible", exp_tcs="besoin_tests", exp_emrg=False,
          ok_tests=allowed("Asthme", "Bronchite")),
 
     dict(id="R3", zone="respiratoire",
          label="BRONCHITE",
          syms=["toux", "fatigue", "fièvre"],
          onset=None, duration=None,
-         exp_top1="Bronchite",
+         exp_top1=None,           # toux+fatigue+fièvre → Grippe ou Bronchite également valides
          exp_top3=["Bronchite", "Grippe"],
-         exp_urg="faible", exp_tcs="incertain", exp_emrg=False,
+         exp_urg="faible", exp_tcs="besoin_tests", exp_emrg=False,
          ok_tests=allowed("Bronchite", "Grippe")),
 
     dict(id="R4", zone="respiratoire",
@@ -102,7 +102,7 @@ CASES = [
          onset=None, duration=None,
          exp_top1="Asthme",
          exp_top3=["Asthme"],
-         exp_urg="faible", exp_tcs="incertain", exp_emrg=False,
+         exp_urg="faible", exp_tcs="besoin_tests", exp_emrg=False,
          ok_tests=allowed("Asthme", "Bronchite", "Pneumonie")),
 
     # ── CARDIAQUE (C1–C7) ──
@@ -231,7 +231,7 @@ CASES = [
          onset=None, duration=None,
          exp_top1=None,           # слабые данные — любой вирусный приемлем
          exp_top3=["Grippe"],
-         exp_urg="faible", exp_tcs="incertain", exp_emrg=False,
+         exp_urg="faible", exp_tcs="besoin_tests", exp_emrg=False,
          ok_tests=allowed("Grippe")),
 
     dict(id="I2", zone="infectieux",
