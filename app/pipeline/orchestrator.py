@@ -530,7 +530,7 @@ def _build_validation(
     )
 
 
-def _empty_response(reason: str) -> AnalyzeResponse:
+def _empty_response(reason: str, urgency_level: str = "faible") -> AnalyzeResponse:
     empty_comparison = Comparison(
         standard_tests=[], standard_cost=0,
         optimized_tests=[], optimized_cost=0,
@@ -542,7 +542,7 @@ def _empty_response(reason: str) -> AnalyzeResponse:
         cost=Cost(required=0, optional=0, savings=0),
         explanation=reason,
         comparison=empty_comparison,
-        urgency_level="faible",
+        urgency_level=urgency_level,
         tcs_level="incertain",
         consultation_cost=CONSULTATION_COST,
     )
@@ -660,16 +660,16 @@ def run(request: AnalyzeRequest) -> AnalyzeResponse:
         )
 
     if not probs:
-        resp = _empty_response(
-            "Les symptômes indiqués ne permettent pas d'identifier un diagnostic. "
-            "Veuillez consulter un médecin."
-        )
         # ── Safety override : symptôme cardiaque isolé → urgency élevé ───────
         _raw_syms_lower = set(s.lower().strip() for s in request.symptoms)
         _CARDIAC_RAW = {"douleur thoracique", "douleur poitrine", "douleur à la poitrine",
                         "douleur au thorax", "mal à la poitrine", "douleur thoracique intense"}
-        if _raw_syms_lower & _CARDIAC_RAW and len(request.symptoms) <= 2:
-            resp.urgency_level = "élevé"
+        _empty_urgency = "élevé" if (_raw_syms_lower & _CARDIAC_RAW and len(request.symptoms) <= 2) else "faible"
+        resp = _empty_response(
+            "Les symptômes indiqués ne permettent pas d'identifier un diagnostic. "
+            "Veuillez consulter un médecin.",
+            urgency_level=_empty_urgency,
+        )
         if _debug: resp.debug_trace = trace
         return resp
 
