@@ -168,9 +168,10 @@ CASES = [
             "emergency": False,
             "tcs_not": ["TCS_1"],
             "confidence_not": ["élevé"],
-            "urgency": "élevé",          # douleur thoracique seule → risque élevé
+            "urgency": "élevé",
         },
         "critical": False,
+        "debug_on_fail": True,
     },
     {
         "id": "L2", "group": "low_data",
@@ -222,12 +223,12 @@ CASES = [
 
 # ─────────────────────────────────────────────────────────────────────────────
 
-def call_api(symptoms, onset=None, duration=None):
+def call_api(symptoms, onset=None, duration=None, debug=False):
     payload = json.dumps({
         "symptoms": symptoms,
         "onset": onset,
         "duration": duration,
-        "debug": False,
+        "debug": debug,
     }).encode()
     req = urllib.request.Request(
         f"{BASE}/analyze",
@@ -384,6 +385,19 @@ def run():
         if fails:
             for f in fails:
                 print(f"         ✗ {f}")
+            # Debug extra для розуміння причини
+            if case.get("debug_on_fail"):
+                try:
+                    data_dbg = call_api(case["symptoms"], onset=case.get("onset"),
+                                        duration=case.get("duration"), debug=True)
+                    dt = data_dbg.get("debug_trace", {})
+                    print(f"         [DBG] after_parser : {dt.get('symptoms_after_parser')}")
+                    print(f"         [DBG] after_scm    : {dt.get('symptoms_after_scm')}")
+                    print(f"         [DBG] bpu_probs    : {dt.get('bpu', {}).get('final_probs')}")
+                    print(f"         [DBG] eo_triggered : {dt.get('emergency_override_triggered')}")
+                    print(f"         [DBG] conf_gap     : {dt.get('confidence_gap_top1_top2')}")
+                except Exception as e:
+                    print(f"         [DBG] ERROR: {e}")
         print(f"         Status:   {status}\n")
 
     # ── Summary ──────────────────────────────────────────────────────────────
