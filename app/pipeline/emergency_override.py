@@ -49,7 +49,6 @@ _PATTERNS: list[tuple[frozenset, frozenset, str]] = [
 # Mapping supplémentaire pour les termes qui peuvent arriver sous forme
 # compressée (SCM). Enrichir si besoin.
 _CANON: dict[str, str] = {
-    "malaise":                   "syncope",
     "perte conscience":          "perte de connaissance",
     "deficit neurologique":      "déficit neurologique",
     "dyspnee severe":            "dyspnée sévère",
