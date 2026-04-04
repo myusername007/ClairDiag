@@ -157,7 +157,7 @@ def revaluate(request: RevaluateRequest) -> RevaluateResponse:
     probs_after, changes_log = erl.run(probs_before, request.exam_results)
 
     # Structured tests_impact
-    tests_impact = _build_tests_impact(probs_before, probs_after, request.exam_results)
+    tests_impact = _build_tests_impact(probs_before, probs_after, request.exam_results, diagnoses_after)
 
     # Levels after
     tcs_after, confidence_level, _ = tcs_run(probs_after, len(symptoms), symptoms=symptoms)
@@ -328,6 +328,7 @@ def _build_tests_impact(
     probs_before: dict,
     probs_after: dict,
     exam_results: dict,
+    diagnoses_after: list | None = None,
 ) -> list[TestImpact]:
     """
     ТЗ пріоритет: Top1 → Top2 → do_not_miss.
@@ -356,8 +357,8 @@ def _build_tests_impact(
         direction = "boost" if is_positive else "suppress"
 
         # Сортуємо по пріоритету: top1 > top2 > інші
-        # ВАЖЛИВО: тільки діагнози що є в probs_after (після рееvaluation)
-        after_diags = set(probs_after.keys())
+        # ВАЖЛИВО: тільки діагнози з diagnoses_after (top3 після рееvaluation)
+        after_diags = {d.name for d in (diagnoses_after or [])} or set(probs_after.keys())
 
         def diag_priority(d):
             if top_diags and d == top_diags[0]:
