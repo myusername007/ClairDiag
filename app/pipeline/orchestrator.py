@@ -711,6 +711,15 @@ def run(request: AnalyzeRequest) -> AnalyzeResponse:
 
     # ── Étape 7b : RME — après CRE pour utiliser les probs avec penalties ─────
     urgency_level = rme.run(probs, symptoms=symptoms_compressed)
+
+    # ── Safety override : douleur thoracique isolée → élevé ──────────────────
+    # RME peut retourner faible si BPU normalise sous le seuil (1 symptôme seul).
+    # Règle de sécurité : douleur thoracique avec ≤ 2 symptômes → élevé minimum.
+    _CARDIAC_SAFETY_SYMS: frozenset = frozenset({"douleur thoracique"})
+    if (_CARDIAC_SAFETY_SYMS.issubset(set(symptoms_compressed))
+            and len(symptoms_compressed) <= 2
+            and urgency_level == "faible"):
+        urgency_level = "élevé"
     logger.debug(f"RME → urgency={urgency_level}")
 
     # ── Étape 7c : Emergency Override — patterns absolus post-score ───────────
