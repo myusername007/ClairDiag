@@ -31,19 +31,17 @@ def run(probs: dict[str, float]) -> str:
     top_diag = max(probs, key=probs.get)
     top_prob = probs[top_diag]
 
-    # Diagnostics qui ne déclenchent pas "élevé" même s'ils sont dans URGENT_DIAGNOSES
-    # (Asthme, Bronchite : urgence gérée par RFE, pas par probabilité seule)
+    # Diagnostics qui ne déclenchent pas "élevé" sauf s'ils sont top1 dominant
     _NO_AUTO_HIGH: set[str] = {"Asthme", "Bronchite"}
 
-    # Risque élevé : diagnostic urgent dominant
+    # Risque élevé : diagnostic urgent dominant (top1)
     if top_diag in URGENT_DIAGNOSES and top_diag not in _NO_AUTO_HIGH and top_prob >= _HIGH_RISK_THRESHOLD:
         return "élevé"
 
-    # Risque élevé : diagnostic urgent très probable même si pas en top1
-    # Seuil 0.65 pour éviter les faux positifs (Angor/Pneumonie secondaires)
-    for diag in URGENT_DIAGNOSES:
-        if diag in _NO_AUTO_HIGH:
-            continue
+    # Risque élevé : Pneumonie ou Embolie très probable même si pas en top1
+    # Angor exclu du différentiel — essoufflement seul ne justifie pas urgence sans douleur thoracique
+    _DIFFERENTIAL_URGENT: set[str] = {"Pneumonie", "Embolie pulmonaire"}
+    for diag in _DIFFERENTIAL_URGENT:
         if probs.get(diag, 0) >= 0.65:
             return "élevé"
 
@@ -60,14 +58,16 @@ def run(probs: dict[str, float]) -> str:
     if probs.get("Trouble du rythme", 0) >= 0.70:
         return "modéré"
 
-    # Risque urgent dans le différentiel (top3)
+    # Risque urgent dans le différentiel (top3) — Angor exclu (géré uniquement en top1)
     sorted_diags = sorted(probs.items(), key=lambda x: -x[1])[:3]
     for diag, prob in sorted_diags:
         if diag in _NO_AUTO_HIGH:
             continue
+        if diag == "Angor":
+            continue
         if diag in URGENT_DIAGNOSES and prob >= 0.44:
             return "élevé"
-        if diag in URGENT_DIAGNOSES and prob >= 0.35:
+        if diag in URGENT_DIAGNOSES and prob >= 0.50:
             return "modéré"
 
     # Tous les autres cas (Grippe, Rhinopharyngite, Bronchite...) : faible
